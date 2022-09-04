@@ -1,0 +1,26 @@
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'purewebm'
+version = '0.0.1'
+authors = [
+    { name='4ndrs', email='andres.degozaru@gmail.com' },
+]
+description = 'Utility to encode quick webms with ffmpeg'
+readme = 'README.md'
+license = { file='LICENSE' }
+requires-python = '>=3.10'
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'License :: OSI Approved :: MIT License',
+    'Operating System :: POSIX :: Linux',
+]
+
+[project.scripts]
+purewebm = 'purewebm.__main__:main'
+
+[project.urls]
+'Homepage' = 'https://github.com/4ndrs/PureWebM'
+'Bug Tracker' = 'https://github.com/4ndrs/PureWebM/issues'
