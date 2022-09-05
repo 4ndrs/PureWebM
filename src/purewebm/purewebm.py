@@ -253,7 +253,7 @@ def get_duration(file_path):
     return data["start"], data["duration"]
 
 
-def print_usage(full=True):
+def print_usage(full=False):
     """Prints instructions"""
 
     if not full:
