@@ -14,6 +14,8 @@ from types import SimpleNamespace
 from multiprocessing import Process, Event, Manager
 from multiprocessing.connection import Listener, Client
 
+from . import CONFIG_PATH
+
 
 def main():
     """Main function"""
@@ -30,7 +32,9 @@ def main():
         print_usage()
         sys.exit(os.EX_USAGE)
 
-    socket = pathlib.Path("PureWebM")
+    verify_config()
+
+    socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
         send(kwargs, socket)
@@ -55,7 +59,7 @@ def main():
             socket.unlink()
             sys.exit(os.EX_OK)
 
-        time.sleep(1)
+        time.sleep(0.2)
 
 
 def enqueue(queue, kwargs):
@@ -70,7 +74,8 @@ def listen(queue, socket):
     """Listen for connections for interprocess communication using
     Unix sockets, sends the received kwargs to enqueue"""
     socket = str(socket)
-    with Listener(socket, "AF_UNIX", authkey=b"secret password") as listener:
+    key = get_key()
+    with Listener(socket, "AF_UNIX", authkey=key) as listener:
         while True:
             with listener.accept() as conn:
                 kwargs = conn.recv()
@@ -81,7 +86,8 @@ def send(kwargs, socket):
     """Attempts to connect to the Unix socket, and sends the kwargs to the
     main process if successful"""
     socket = str(socket)
-    with Client(socket, "AF_UNIX", authkey=b"secret password") as conn:
+    key = get_key()
+    with Client(socket, "AF_UNIX", authkey=key) as conn:
         conn.send(kwargs)
 
 
@@ -253,11 +259,42 @@ def get_duration(file_path):
     return data["start"], data["duration"]
 
 
+def get_key():
+    """Returns the key for IPC, read from a key file, generates it if it doesn't
+    exists"""
+    key_file = CONFIG_PATH / pathlib.Path("PureWebM.key")
+
+    if key_file.exists() and key_file.stat().st_size > 0:
+        with open(key_file, "rb") as file:
+            key = file.read()
+        return key
+
+    # Generate the key with os.urandom() if it doesn't exist
+    key = os.urandom(256)
+    with open(key_file, "wb") as file:
+        file.write(key)
+    return key
+
+
+def verify_config():
+    """Checks the configuration folder, creates it if it doesn't exist"""
+    if not CONFIG_PATH.exists():
+        try:
+            CONFIG_PATH.mkdir(parents=True)
+        except PermissionError:
+            print(
+                "Unable to create the configuration folder "
+                f"{CONFIG_PATH}, permission denied",
+                file=sys.stderr,
+            )
+            sys.exit(os.EX_CANTCREAT)
+
+
 def print_usage(full=False):
     """Prints instructions"""
 
     if not full:
-        print("Usage: -")
+        print("\nUsage: -")
 
 
 if __name__ == "__main__":
