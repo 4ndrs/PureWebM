@@ -140,7 +140,7 @@ def prepare(webm, kwargs):
 
     webm.encoder = kwargs.get("encoder", "libvpx-vp9")
     webm.crf = kwargs.get("crf", "24")
-    webm.size_limit = kwargs.get("bitrate_limit", "3")  # In megabytes
+    webm.size_limit = kwargs.get("size_limit", "3")  # In megabytes
     webm.lavfi = kwargs.get("lavfi", None)
     webm.ss = kwargs.get("ss", None)
     webm.to = kwargs.get("to", None)
