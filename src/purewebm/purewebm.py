@@ -45,7 +45,9 @@ def main():
     manager = Manager()
     encoding_done = Event()
 
-    queue = manager.list()
+    queue = manager.Namespace()
+    queue.items = manager.list()
+    queue.total_size = 0
     enqueue(queue, kwargs)
 
     listen_process = Process(target=listen, args=(queue, socket))
@@ -67,7 +69,8 @@ def enqueue(queue, kwargs):
     webm = SimpleNamespace()
     webm = prepare(webm, kwargs)
 
-    queue.append(webm)
+    queue.items.append(webm)
+    queue.total_size += 1
 
 
 def listen(queue, socket):
@@ -94,9 +97,10 @@ def send(kwargs, socket):
 def encode(queue, encoding_done):
     """Encodes the webms in the queue list"""
 
-    size = len(queue)
-    while queue:
-        webm = queue.pop(0)
+    encoding = 0
+    while queue.items:
+        webm = queue.items.pop(0)
+        encoding += 1
         if webm.twopass:
             first_pass, second_pass = generate_ffmpeg_args(webm)
         else:
@@ -111,15 +115,12 @@ def encode(queue, encoding_done):
 
         # place holder
         print(
-            f"Encoding {size - len(queue)} of {size}",
+            f"Encoding {encoding} of {queue.total_size}",
             flush=True,
             end="\r",
         )
 
         time.sleep(10)
-
-        if len(queue) + 1 > size:
-            size += len(queue)
 
     print("\nEncoding done")
     encoding_done.set()
