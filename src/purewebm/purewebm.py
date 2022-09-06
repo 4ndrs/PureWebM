@@ -269,9 +269,11 @@ def get_key():
             key = file.read()
         return key
 
-    # Generate the key with os.urandom() if it doesn't exist
+    # Generate the file and the key with os.urandom()
+    # The file will be masked with 600 permissions
     key = os.urandom(256)
-    with open(key_file, "wb") as file:
+    file_descriptor = os.open(key_file, os.O_WRONLY | os.O_CREAT, 0o600)
+    with open(file_descriptor, "wb") as file:
         file.write(key)
     return key
 
