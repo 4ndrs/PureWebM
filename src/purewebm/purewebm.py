@@ -105,6 +105,7 @@ def encode(queue, encoding_done):
             first_pass, second_pass = generate_ffmpeg_args(webm)
         else:
             single_pass = generate_ffmpeg_args(webm)
+            print(f"{single_pass}")
 
         # First try with webm.crf and if the final file is bigger than
         # the webm.size_limit, then try again against a calculated bitrate
@@ -114,11 +115,11 @@ def encode(queue, encoding_done):
         # is equal to or lower than the size_limit
 
         # place holder
-        print(
-            f"Encoding {encoding} of {queue.total_size}",
-            flush=True,
-            end="\r",
-        )
+        # print(
+        #    f"Encoding {encoding} of {queue.total_size}",
+        #    flush=True,
+        #    end="\r",
+        # )
 
         time.sleep(10)
 
@@ -147,11 +148,18 @@ def prepare(webm, kwargs):
     webm.to = kwargs.get("to", None)
     webm.extra_params = kwargs.get("extra_params", None)
 
+    if webm.extra_params and "-c:v" in webm.extra_params:
+        encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
+        if encoder:
+            webm.encoder = encoder[1]
+
     # To sync the burned subtitles need output seeking
     if webm.lavfi and "subtitle" in webm.lavfi:
         webm.input_seeking = False
 
-    if webm.encoder == "libx264":  # Experimental
+    if "libvpx" not in webm.encoder or (
+        webm.extra_params and "libvpx" not in webm.extra_params
+    ):
         webm.twopass = False
         webm.input_seeking = False
         webm.crf = "18" if "crf" not in kwargs else webm.crf
