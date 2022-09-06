@@ -14,24 +14,13 @@ from types import SimpleNamespace
 from multiprocessing import Process, Event, Manager
 from multiprocessing.connection import Listener, Client
 
-from . import CONFIG_PATH
+from . import CONFIG_PATH, __version__
 
 
 def main():
     """Main function"""
-    try:
-        kwargs = dict(arg.split("=") for arg in sys.argv[1:])
 
-    except ValueError:
-        print("keyword arguments must be supplied", file=sys.stderr)
-        print_usage()
-        sys.exit(os.EX_USAGE)
-
-    if "input" not in kwargs:
-        print("An input file must be supplied to proceed", file=sys.stderr)
-        print_usage()
-        sys.exit(os.EX_USAGE)
-
+    kwargs = parse_argv()
     verify_config()
 
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
@@ -287,6 +276,31 @@ def get_key():
     return key
 
 
+def parse_argv():
+    """Parses the command line arguments"""
+
+    if len(sys.argv) == 2 and sys.argv[1].startswith("-"):
+        match sys.argv[1]:
+            case "--version" | "-v":
+                print_version()
+                sys.exit(os.EX_OK)
+
+    try:
+        kwargs = dict(arg.split("=") for arg in sys.argv[1:])
+
+    except ValueError:
+        print("keyword arguments must be supplied", file=sys.stderr)
+        print_usage()
+        sys.exit(os.EX_USAGE)
+
+    if "input" not in kwargs:
+        print("An input file must be supplied to proceed", file=sys.stderr)
+        print_usage()
+        sys.exit(os.EX_USAGE)
+
+    return kwargs
+
+
 def verify_config():
     """Checks the configuration folder, creates it if it doesn't exist"""
     if not CONFIG_PATH.exists():
@@ -306,6 +320,11 @@ def print_usage(full=False):
 
     if not full:
         print("\nUsage: -")
+
+
+def print_version():
+    """Prints the package version"""
+    print(f"PureWebM {__version__}")
 
 
 if __name__ == "__main__":
