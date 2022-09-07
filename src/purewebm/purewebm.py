@@ -83,6 +83,10 @@ def send(kwargs, socket):
         conn.send(kwargs)
 
 
+# Needs refactoring
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-branches
 def encode(queue, encoding_done):
     """Encodes the webms in the queue list"""
     color = {
@@ -107,7 +111,7 @@ def encode(queue, encoding_done):
 
             # command = " ".join((str(arg) for arg in first_pass))
             try:
-                subprocess.run(
+                subprocess.run(  # nosec
                     first_pass,
                     check=True,
                     capture_output=True,
@@ -136,14 +140,18 @@ def encode(queue, encoding_done):
                 )
 
             else:
-                bitrate = round(
-                    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
-                )
-
+                size_limit = webm.size_limit * 1024  # convert to kilobytes
                 crf_failed = False
+
                 while True:
                     # Try encoding just with the crf
                     if not crf_failed:
+                        # insert -b:v 0 to trigger constant quality mode
+                        second_pass.insert(
+                            second_pass.index("-crf") + 2, "-b:v"
+                        )
+                        second_pass.insert(second_pass.index("-b:v") + 1, "0")
+
                         run_ffmpeg(
                             second_pass,
                             color,
@@ -152,29 +160,80 @@ def encode(queue, encoding_done):
                             queue.total_size,
                         )
 
-            # Encoding done
+                        # Check the file size is within the limit
+                        size = webm.output.stat().st_size / 1024
+                        if size > size_limit:
+                            percent = ((size - size_limit) / size_limit) * 100
+                            percent_txt = (
+                                round(percent)
+                                if round(percent) > 0
+                                else round(percent, 3)
+                            )
+                            print_progress(
+                                f"{color['red']}Final file size is greater "
+                                f"than the limit by {percent_txt}% with "
+                                f"--crf {webm.crf}{color['endc']}\n",
+                                encoding,
+                                queue.total_size,
+                            )
+                            percent = None
+                            crf_failed = True
+                        else:
+                            # File size is within the limit
+                            break
+                    else:
+                        if percent:
+                            bitrate -= percent / 100 * bitrate
+                        else:
+                            bitrate = size_limit / duration * 8 * 1024 / 1000
+
+                        print_progress(
+                            f"{color['red']}Retrying with bitrate "
+                            f"{round(bitrate)}K{color['endc']}\n",
+                            encoding,
+                            queue.total_size,
+                        )
+
+                        second_pass[second_pass.index("-b:v") + 1] = (
+                            str(round(bitrate, 3)) + "K"
+                        )
+                        run_ffmpeg(
+                            second_pass,
+                            color,
+                            duration,
+                            encoding,
+                            queue.total_size,
+                        )
+
+                        size = webm.output.stat().st_size / 1024
+                        if size > size_limit:
+                            percent = ((size - size_limit) / size_limit) * 100
+                            percent_txt = (
+                                round(percent)
+                                if round(percent) > 0
+                                else round(percent, 3)
+                            )
+                            print_progress(
+                                f"{color['red']}Final file size is greater "
+                                f"than the limit by {percent_txt}% with "
+                                f"bitrate {round(bitrate)}K{color['endc']}\n",
+                                encoding,
+                                queue.total_size,
+                            )
+                        else:
+                            break
+
+            # Two-pass encoding done
             print_progress(
                 f"{color['green']}100%{color['endc']}",
                 encoding,
                 queue.total_size,
             )
+            # Delete the first pass log file
+            pathlib.Path("PureWebM2pass-0.log").unlink()
 
         else:
             single_pass = generate_ffmpeg_args(webm)
-
-        # First try with webm.crf and if the final file is bigger than
-        # the webm.size_limit, then try again against a calculated bitrate
-        # calc = (size_limit / real_duration * 8 * 1024 * 1024 / 1000)
-        # if it fails again, calculate the difference in percentage and remove
-        # it from the calculated bitrate, again and again until the file size
-        # is equal to or lower than the size_limit
-
-        # place holder
-        # print(
-        #    f"Encoding {encoding} of {queue.total_size}",
-        #    flush=True,
-        #    end="\r",
-        # )
 
     print(end="\n")
     encoding_done.set()
