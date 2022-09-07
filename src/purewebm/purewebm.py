@@ -401,8 +401,8 @@ def generate_ffmpeg_args(webm):
     ffmpeg_args = ["ffmpeg", "-hide_banner"] + ffmpeg_args
     ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
     ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
-    ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
     ffmpeg_args += ["-crf", webm.crf]
+    ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
 
     if webm.twopass:
         first_pass = ffmpeg_args + [
