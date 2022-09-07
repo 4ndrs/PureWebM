@@ -123,6 +123,11 @@ def encode(queue, encoding_done):
             bitrate = 0
             duration = get_seconds(webm.to) - get_seconds(webm.ss)
 
+            # insert the crf in the second_pass
+            second_pass.insert(second_pass.index("2") + 1, "-crf")
+            second_pass.insert(second_pass.index("-crf") + 1, webm.crf)
+            print(f"\n{' '.join((str(x) for x in second_pass))}")
+
             if not webm.size_limit:
                 with subprocess.Popen(
                     second_pass,
@@ -141,15 +146,42 @@ def encode(queue, encoding_done):
                             encoding,
                             queue.total_size,
                         )
-                    print_progress(
-                        f"{color['green']}100%{color['endc']}",
-                        encoding,
-                        queue.total_size,
-                    )
 
-            # bitrate = round(
-            #    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
-            # )
+            else:
+                bitrate = round(
+                    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
+                )
+
+                crf_failed = False
+                while True:
+                    # Try encoding just with the crf
+                    if not crf_failed:
+                        with subprocess.Popen(
+                            second_pass,
+                            universal_newlines=True,
+                            stderr=subprocess.STDOUT,
+                            stdout=subprocess.PIPE,
+                            bufsize=1,
+                        ) as task:
+                            for line in task.stdout:
+                                progress = get_progress(line)
+                                if progress is None:
+                                    continue
+                                percent = round(
+                                    get_seconds(progress) * 100 / duration
+                                )
+                                print_progress(
+                                    f"{color['blue']}{percent}%{color['endc']}",
+                                    encoding,
+                                    queue.total_size,
+                                )
+            # Encoding done
+            print_progress(
+                f"{color['green']}100%{color['endc']}",
+                encoding,
+                queue.total_size,
+            )
+
         else:
             single_pass = generate_ffmpeg_args(webm)
 
