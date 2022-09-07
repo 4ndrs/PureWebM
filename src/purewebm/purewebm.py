@@ -181,7 +181,7 @@ def encode(queue, encoding_done):
                                 ) * 100
                                 percent_txt = (
                                     round(percent)
-                                    if round(percent) > 0
+                                    if round(percent) > 1
                                     else round(percent, 3)
                                 )
                                 print_progress(
@@ -230,14 +230,14 @@ def encode(queue, encoding_done):
                                 ) * 100
                                 percent_txt = (
                                     round(percent)
-                                    if round(percent) > 0
+                                    if round(percent) > 1
                                     else round(percent, 3)
                                 )
                                 print_progress(
                                     f"{color['red']}Final file size is "
-                                    "greater than the limit by {percent_txt}% "
-                                    f"with bitrate {round(bitrate)}K"
-                                    f"{color['endc']}\n",
+                                    f"greater than the limit by "
+                                    f"{percent_txt}% with bitrate "
+                                    f"{round(bitrate)}K{color['endc']}\n",
                                     encoding,
                                     queue.total_size,
                                 )
