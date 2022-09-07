@@ -22,8 +22,8 @@ def main():
     """Main function"""
 
     kwargs = parse_argv()
-    verify_config()
 
+    verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
@@ -340,13 +340,6 @@ def verify_config():
                 file=sys.stderr,
             )
             sys.exit(os.EX_CANTCREAT)
-
-
-def print_usage(full=False):
-    """Prints instructions"""
-
-    if not full:
-        print(f"\nUsage: {__name__} input=video.mkv")
 
 
 if __name__ == "__main__":
