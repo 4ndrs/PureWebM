@@ -20,7 +20,6 @@ from . import CONFIG_PATH, __version__
 
 def main():
     """Main function"""
-
     kwargs = parse_argv()
 
     verify_config()
@@ -86,17 +85,57 @@ def send(kwargs, socket):
 
 def encode(queue, encoding_done):
     """Encodes the webms in the queue list"""
-
     encoding = 0
     while queue.items:
         webm = queue.items.pop(0)
         encoding += 1
+
         if webm.twopass:
+            print_progress(
+                "processing the first pass", encoding, queue.total_size
+            )
+
             first_pass, second_pass = generate_ffmpeg_args(webm)
-            print(second_pass)
+            try:
+                subprocess.run(
+                    first_pass,
+                    check=True,
+                    capture_output=True,
+                )
+            except subprocess.CalledProcessError:
+                print_progress(
+                    "Error running the first pass\n",
+                    encoding,
+                    queue.total_size,
+                )
+                encoding_done.set()
+                sys.exit(2)
+
+            bitrate = 0
+            duration = get_seconds(webm.to) - get_seconds(webm.ss)
+
+            if not webm.size_limit:
+                with subprocess.Popen(
+                    second_pass,
+                    universal_newlines=True,
+                    stderr=subprocess.STDOUT,
+                    stdout=subprocess.PIPE,
+                    bufsize=1,
+                ) as task:
+                    for line in task.stdout:
+                        progress = get_progress(line)
+                        if progress is None:
+                            continue
+                        percent = round(progress * 100 / duration)
+                        print(f"Test {percent}%", end="\r")
+
+                # bitrate = round(
+                #    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
+                # )
+            print(f"\n{duration=}, {bitrate=}")
+
         else:
             single_pass = generate_ffmpeg_args(webm)
-            print(single_pass)
 
         # First try with webm.crf and if the final file is bigger than
         # the webm.size_limit, then try again against a calculated bitrate
@@ -112,15 +151,11 @@ def encode(queue, encoding_done):
         #    end="\r",
         # )
 
-        time.sleep(10)
-
-    print("\nEncoding done")
     encoding_done.set()
 
 
 def prepare(webm, kwargs):
     """Prepares the webm namespace"""
-
     webm.inputs = kwargs["input"]
     webm.output = kwargs["output"]
     webm.encoder = kwargs["encoder"]
@@ -202,13 +237,28 @@ def generate_ffmpeg_args(webm):
             ffmpeg_args += ["-i", path]
         ffmpeg_args += ["-ss", webm.ss, "-to", webm.to]
 
+    ffmpeg_args = ["ffmpeg", "-hide_banner"] + ffmpeg_args
     ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
     ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
     ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
 
     if webm.twopass:
-        first_pass = ffmpeg_args + ["-pass", "1", "/dev/null", "-y"]
-        second_pass = ffmpeg_args + ["-pass", "2", webm.output, "-y"]
+        first_pass = ffmpeg_args + [
+            "-pass",
+            "1",
+            "-passlogfile",
+            "PureWebM2pass",
+            "/dev/null",
+            "-y",
+        ]
+        second_pass = ffmpeg_args + [
+            "-pass",
+            "2",
+            "-passlogfile",
+            "PureWebM2pass",
+            webm.output,
+            "-y",
+        ]
         return first_pass, second_pass
 
     return ffmpeg_args + [webm.output, "-y"]
@@ -217,7 +267,6 @@ def generate_ffmpeg_args(webm):
 def generate_filename(*seeds, encoder, input_filename, save_path):
     """Generates the filename for the output file using an MD5 hash of the seed
     variables and the name of the input file"""
-
     md5 = hashlib.new("md5", usedforsecurity=False)
     for seed in seeds:
         md5.update(str(seed).encode())
@@ -230,7 +279,6 @@ def generate_filename(*seeds, encoder, input_filename, save_path):
 
 def get_duration(file_path):
     """Retrieves the file's duration and start times with ffmpeg"""
-
     pattern = (
         r"Duration:\s+(?P<duration>\d{2,}:\d{2}:\d{2}\.\d+),\s+"
         r"start:\s+(?P<start>\d+\.\d+)"
@@ -252,6 +300,15 @@ def get_duration(file_path):
     return data["start"], data["duration"]
 
 
+def get_progress(line):
+    """Parses and returns the time progress printed by ffmpeg"""
+    pattern = r"time=(\d{2,}:\d{2}:\d{2}\.\d+)"
+    found = re.search(pattern, line)
+    if found:
+        return found[1]
+    return None
+
+
 def get_key():
     """Returns the key for IPC, read from a key file, generates it if it doesn't
     exists"""
@@ -271,9 +328,20 @@ def get_key():
     return key
 
 
+def get_seconds(timestamp):
+    """Converts timestamp to seconds with 3 decimal places"""
+    seconds = sum(
+        (
+            float(num) * (60**index)
+            for index, num in enumerate(reversed(timestamp.split(":")))
+        )
+    )
+
+    return round(seconds, 3)
+
+
 def parse_argv():
     """Parses the command line arguments"""
-
     parser = argparse.ArgumentParser(
         description="Utility to encode quick webms with ffmpeg"
     )
@@ -346,6 +414,11 @@ def verify_config():
                 file=sys.stderr,
             )
             sys.exit(os.EX_CANTCREAT)
+
+
+def print_progress(message, progress, size):
+    """Prints the encoding progress with a customized message"""
+    print(f"Encoding {progress} of {size}: {message}", end="\r", flush=True)
 
 
 if __name__ == "__main__":
