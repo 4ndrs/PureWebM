@@ -93,9 +93,10 @@ def encode(queue, encoding_done):
         encoding += 1
         if webm.twopass:
             first_pass, second_pass = generate_ffmpeg_args(webm)
+            print(second_pass)
         else:
             single_pass = generate_ffmpeg_args(webm)
-            print(f"{single_pass}")
+            print(single_pass)
 
         # First try with webm.crf and if the final file is bigger than
         # the webm.size_limit, then try again against a calculated bitrate
@@ -164,9 +165,7 @@ def prepare(webm, kwargs):
     if webm.to is None:
         webm.to = stop
 
-    if webm.output:
-        webm.output = pathlib.Path(webm.output)
-    else:
+    if webm.output is None:
         webm.output = generate_filename(
             webm.ss,
             webm.to,
@@ -322,10 +321,17 @@ def parse_argv():
     parser.add_argument(
         "--extra_params",
         help="the extra parameters to pass to ffmpeg, these will be appended "
-        "to the end of command's parameters",
+        "making it possible to override some defaults",
     )
 
-    return vars(parser.parse_args())
+    kwargs = vars(parser.parse_args())
+    kwargs["input"] = [
+        pathlib.Path(path).absolute() for path in kwargs["input"]
+    ]
+    if kwargs["output"]:
+        kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
+
+    return kwargs
 
 
 def verify_config():
