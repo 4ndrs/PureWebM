@@ -484,7 +484,7 @@ def parse_argv():
         description="Utility to encode quick webms with ffmpeg"
     )
     parser.add_argument(
-        "--version", action="version", version=f"PureWebM {__version__}"
+        "--version", "-v", action="version", version=f"PureWebM {__version__}"
     )
 
     parser.add_argument(
@@ -497,6 +497,7 @@ def parse_argv():
     )
     parser.add_argument(
         "--output",
+        "-o",
         help="the output file, if not set, the filename will be generated "
         "using the filename of the input file plus a short MD5 hash and saved "
         f"in {pathlib.Path('~/Videos/PureWebM').expanduser()}",
@@ -504,28 +505,39 @@ def parse_argv():
 
     parser.add_argument(
         "--encoder",
+        "-e",
         default="libvpx-vp9",
         help="the encoder to use (default is libvpx-vp9)",
     )
     parser.add_argument(
-        "--start_time", help="the start time offset (same as ffmpeg's -ss)"
+        "--start_time",
+        "-ss",
+        help="the start time offset (same as ffmpeg's -ss)",
     )
     parser.add_argument(
-        "--stop_time", help="the stop time (same as ffmpeg's -to)"
+        "--stop_time",
+        "-to",
+        help="the stop time (same as ffmpeg's -to)",
     )
-    parser.add_argument("--lavfi", help="the set of filters to pass to ffmpeg")
+    parser.add_argument(
+        "--lavfi",
+        "-lavfi",
+        help="the set of filters to pass to ffmpeg",
+    )
     parser.add_argument(
         "--size_limit",
+        "-sl",
         default=3,
         type=float,
         help="the size limit of the output file in megabytes, use 0 for no "
         "limit (default is 3)",
     )
     parser.add_argument(
-        "--crf", default="24", help="the crf to use (default is 24)"
+        "--crf", "-crf", default="24", help="the crf to use (default is 24)"
     )
     parser.add_argument(
         "--extra_params",
+        "-ep",
         help="the extra parameters to pass to ffmpeg, these will be appended "
         "making it possible to override some defaults",
     )
