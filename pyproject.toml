@@ -8,7 +8,7 @@ version = '0.0.1'
 authors = [
     { name='4ndrs', email='andres.degozaru@gmail.com' },
 ]
-description = 'Utility to encode quick webms with ffmpeg'
+description = 'Utility to encode quick webms using Unix sockets to queue the encoding parameters whenever it is executed'
 readme = 'README.md'
 license = { file='LICENSE' }
 requires-python = '>=3.10'
