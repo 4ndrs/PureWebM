@@ -86,9 +86,9 @@ def send(kwargs, socket):
 def encode(queue, encoding_done):
     """Encodes the webms in the queue list"""
     color = {
-        "green": "\033[92m",
-        "blue": "\033[94m",
-        "red": "\033[91m",
+        "green": "\033[1;92m",
+        "blue": "\033[1;94m",
+        "red": "\033[1;91m",
         "endc": "\033[0m",
     }
     encoding = 0
