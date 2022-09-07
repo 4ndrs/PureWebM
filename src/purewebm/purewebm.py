@@ -98,6 +98,7 @@ def encode(queue, encoding_done):
     encoding = 0
     while queue.items:
         webm = queue.items.pop(0)
+        duration = get_seconds(webm.to) - get_seconds(webm.ss)
         encoding += 1
 
         if webm.twopass:
@@ -128,7 +129,6 @@ def encode(queue, encoding_done):
                 continue
 
             bitrate = 0
-            duration = get_seconds(webm.to) - get_seconds(webm.ss)
 
             if not webm.size_limit:
                 run_ffmpeg(
@@ -234,6 +234,26 @@ def encode(queue, encoding_done):
 
         else:
             single_pass = generate_ffmpeg_args(webm)
+            # command = " ".join((str(arg) for arg in single_pass))
+
+            print_progress(
+                f"{color['blue']}processing the single pass{color['endc']}",
+                encoding,
+                queue.total_size,
+            )
+            # Single pass has no size limit, just constant quality with crf
+            single_pass.insert(single_pass.index("-crf") + 2, "-b:v")
+            single_pass.insert(single_pass.index("-b:v") + 1, "0")
+            run_ffmpeg(
+                single_pass, color, duration, encoding, queue.total_size
+            )
+
+            # Single pass encoding done
+            print_progress(
+                f"{color['green']}100%{color['endc']}",
+                encoding,
+                queue.total_size,
+            )
 
     print(end="\n")
     encoding_done.set()
