@@ -193,6 +193,9 @@ def encode(queue, encoding_done):
                                     encoding,
                                     queue.total_size,
                                 )
+                                second_pass[
+                                    second_pass.index("-crf") + 1
+                                ] = "10"
                                 percent = None
                                 crf_failed = True
                             else:
