@@ -134,9 +134,10 @@ def encode(queue, encoding_done):
                         encoding,
                         queue.total_size,
                     )
-                    error_message = get_error(error.stderr.decode())
-                    if error_message:
-                        print("\n" + error_message, end=color["endc"])
+                    print(f"\n{error.stderr.decode()}{color['endc']}", end="")
+                    # error_message = get_error(error.stderr.decode())
+                    # if error_message:
+                    #    print("\n" + error_message, end=color["endc"])
                     continue
 
                 bitrate = 0
