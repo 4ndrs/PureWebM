@@ -2,3 +2,4 @@
 *.swo
 /env
 __pycache__
+dist
