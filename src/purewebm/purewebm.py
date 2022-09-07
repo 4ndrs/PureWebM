@@ -146,7 +146,7 @@ def encode(queue, encoding_done):
                     run_ffmpeg(
                         second_pass,
                         color,
-                        duration,
+                        webm,
                         encoding,
                         queue.total_size,
                     )
@@ -169,7 +169,7 @@ def encode(queue, encoding_done):
                             run_ffmpeg(
                                 second_pass,
                                 color,
-                                duration,
+                                webm,
                                 encoding,
                                 queue.total_size,
                             )
@@ -186,7 +186,7 @@ def encode(queue, encoding_done):
                                     else round(percent, 3)
                                 )
                                 print_progress(
-                                    f"{color['red']}Final file size is "
+                                    f"{color['red']}File size is "
                                     "greater than the limit by "
                                     f"{percent_txt}% with crf {webm.crf}"
                                     f"{color['endc']}\n",
@@ -222,7 +222,7 @@ def encode(queue, encoding_done):
                             run_ffmpeg(
                                 second_pass,
                                 color,
-                                duration,
+                                webm,
                                 encoding,
                                 queue.total_size,
                             )
@@ -238,7 +238,7 @@ def encode(queue, encoding_done):
                                     else round(percent, 3)
                                 )
                                 print_progress(
-                                    f"{color['red']}Final file size is "
+                                    f"{color['red']}File size is "
                                     f"greater than the limit by "
                                     f"{percent_txt}% with bitrate "
                                     f"{round(bitrate)}K{color['endc']}\n",
@@ -271,7 +271,7 @@ def encode(queue, encoding_done):
                 single_pass.insert(single_pass.index("-crf") + 2, "-b:v")
                 single_pass.insert(single_pass.index("-b:v") + 1, "0")
                 run_ffmpeg(
-                    single_pass, color, duration, encoding, queue.total_size
+                    single_pass, color, webm, encoding, queue.total_size
                 )
 
                 # Single pass encoding done
@@ -288,9 +288,11 @@ def encode(queue, encoding_done):
         encoding_done.set()
 
 
-def run_ffmpeg(command, color, duration, encoding, total_size):
+def run_ffmpeg(command, color, webm, encoding, total_size):
     """Runs ffmpeg with the specified command and prints the progress on the
     screen"""
+    limit = webm.size_limit * 1024
+    duration = get_seconds(webm.to) - get_seconds(webm.ss)
     with subprocess.Popen(  # nosec
         command,
         universal_newlines=True,
@@ -299,9 +301,12 @@ def run_ffmpeg(command, color, duration, encoding, total_size):
         bufsize=1,
     ) as task:
         for line in task.stdout:
-            progress = get_progress(line)
+            progress, size = get_progress(line)
             if progress is None:
                 continue
+            if limit:
+                if size > limit:
+                    task.terminate()
             percent = round(get_seconds(progress) * 100 / duration)
             print_progress(
                 f"{color['blue']}{percent}%{color['endc']}",
@@ -458,12 +463,16 @@ def get_duration(file_path):
 
 
 def get_progress(line):
-    """Parses and returns the time progress printed by ffmpeg"""
-    pattern = r"time=(\d{2,}:\d{2}:\d{2}\.\d+)"
+    """Parses and returns the time progress and size printed by ffmpeg"""
+    pattern = (
+        r".*size=\s+(?P<size>\d+)kB\s+"
+        r"time=(?P<time>\d{2,}:\d{2}:\d{2}\.\d+)"
+    )
     found = re.search(pattern, line)
     if found:
-        return found[1]
-    return None
+        found = found.groupdict()
+        return found["time"], int(found["size"])
+    return None, None
 
 
 def get_error(ffmpeg_output):
