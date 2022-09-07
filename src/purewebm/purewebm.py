@@ -85,6 +85,12 @@ def send(kwargs, socket):
 
 def encode(queue, encoding_done):
     """Encodes the webms in the queue list"""
+    color = {
+        "green": "\033[92m",
+        "blue": "\033[94m",
+        "red": "\033[91m",
+        "endc": "\033[0m",
+    }
     encoding = 0
     while queue.items:
         webm = queue.items.pop(0)
@@ -92,7 +98,9 @@ def encode(queue, encoding_done):
 
         if webm.twopass:
             print_progress(
-                "processing the first pass", encoding, queue.total_size
+                f"{color['blue']}processing the first pass{color['endc']}",
+                encoding,
+                queue.total_size,
             )
 
             first_pass, second_pass = generate_ffmpeg_args(webm)
@@ -104,7 +112,8 @@ def encode(queue, encoding_done):
                 )
             except subprocess.CalledProcessError:
                 print_progress(
-                    "Error running the first pass\n",
+                    f"{color['red']}Error running the first pass"
+                    f"{color['endc']}\n",
                     encoding,
                     queue.total_size,
                 )
@@ -126,14 +135,21 @@ def encode(queue, encoding_done):
                         progress = get_progress(line)
                         if progress is None:
                             continue
-                        percent = round(progress * 100 / duration)
-                        print(f"Test {percent}%", end="\r")
+                        percent = round(get_seconds(progress) * 100 / duration)
+                        print_progress(
+                            f"{color['green']}{percent}%{color['endc']}",
+                            encoding,
+                            queue.total_size,
+                        )
+                    print_progress(
+                        f"{color['green']}done{color['endc']}",
+                        encoding,
+                        queue.total_size,
+                    )
 
-                # bitrate = round(
-                #    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
-                # )
-            print(f"\n{duration=}, {bitrate=}")
-
+            # bitrate = round(
+            #    webm.size_limit / duration * 8 * (1024**2) / 1000, 3
+            # )
         else:
             single_pass = generate_ffmpeg_args(webm)
 
@@ -151,6 +167,7 @@ def encode(queue, encoding_done):
         #    end="\r",
         # )
 
+    print(end="\n")
     encoding_done.set()
 
 
@@ -418,7 +435,12 @@ def verify_config():
 
 def print_progress(message, progress, size):
     """Prints the encoding progress with a customized message"""
-    print(f"Encoding {progress} of {size}: {message}", end="\r", flush=True)
+    clear_line = "\r\033[K"
+    print(
+        f"{clear_line}Encoding {progress} of {size}: {message}",
+        end="",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
