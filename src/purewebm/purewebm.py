@@ -123,9 +123,6 @@ def encode(queue, encoding_done):
             bitrate = 0
             duration = get_seconds(webm.to) - get_seconds(webm.ss)
 
-            # insert the crf in the second_pass
-            second_pass.insert(second_pass.index("-pass") + 2, "-crf")
-            second_pass.insert(second_pass.index("-crf") + 1, webm.crf)
             print(f"\n{' '.join((str(x) for x in second_pass))}")
 
             if not webm.size_limit:
@@ -291,6 +288,7 @@ def generate_ffmpeg_args(webm):
     ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
     ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
     ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
+    ffmpeg_args += ["-crf", webm.crf]
 
     if webm.twopass:
         first_pass = ffmpeg_args + [
