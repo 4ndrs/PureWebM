@@ -216,9 +216,11 @@ def encode(queue, encoding_done):
                                 queue.total_size,
                             )
 
-                            second_pass[second_pass.index("-b:v") + 1] = (
-                                str(round(bitrate, 3)) + "K"
+                            # Find the last -b:v and update
+                            index = len(second_pass) - second_pass[::-1].index(
+                                "-b:v"
                             )
+                            second_pass[index] = str(round(bitrate, 3)) + "K"
                             run_ffmpeg(
                                 second_pass,
                                 color,
@@ -333,10 +335,15 @@ def prepare(webm, kwargs):
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
     )
 
-    if webm.extra_params and "-c:v" in webm.extra_params:
-        encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
-        if encoder:
-            webm.encoder = encoder[1]
+    if webm.extra_params:
+        if "-c:v" in webm.extra_params:
+            encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
+            if encoder:
+                webm.encoder = encoder[1]
+        if "-crf" in webm.extra_params:
+            crf = re.search(r"-crf\s+(\d+)", webm.extra_params)
+            if crf:
+                webm.crf = crf[1]
 
     # To sync the burned subtitles need output seeking
     if webm.lavfi and "subtitle" in webm.lavfi:
