@@ -137,12 +137,12 @@ def encode(queue, encoding_done):
                             continue
                         percent = round(get_seconds(progress) * 100 / duration)
                         print_progress(
-                            f"{color['green']}{percent}%{color['endc']}",
+                            f"{color['blue']}{percent}%{color['endc']}",
                             encoding,
                             queue.total_size,
                         )
                     print_progress(
-                        f"{color['green']}done{color['endc']}",
+                        f"{color['green']}100%{color['endc']}",
                         encoding,
                         queue.total_size,
                     )
