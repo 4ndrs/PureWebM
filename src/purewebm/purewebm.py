@@ -304,7 +304,7 @@ def run_ffmpeg(command, color, webm, encoding, total_size):
             progress, size = get_progress(line)
             if progress is None:
                 continue
-            if limit:
+            if limit and webm.twopass:
                 if size > limit:
                     task.terminate()
             percent = round(get_seconds(progress) * 100 / duration)
