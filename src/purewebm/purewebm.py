@@ -187,7 +187,7 @@ def encode(queue, encoding_done):
                                 print_progress(
                                     f"{color['red']}Final file size is "
                                     "greater than the limit by "
-                                    f"{percent_txt}% with --crf {webm.crf}"
+                                    f"{percent_txt}% with crf {webm.crf}"
                                     f"{color['endc']}\n",
                                     encoding,
                                     queue.total_size,
