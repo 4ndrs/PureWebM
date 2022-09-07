@@ -9,6 +9,7 @@ import re
 import time
 import pathlib
 import hashlib
+import argparse
 import subprocess  # nosec
 from types import SimpleNamespace
 from multiprocessing import Process, Event, Manager
@@ -118,24 +119,22 @@ def encode(queue, encoding_done):
 
 def prepare(webm, kwargs):
     """Prepares the webm namespace"""
-    webm.inputs = [pathlib.Path(path) for path in kwargs["input"].split(":+:")]
 
-    # Set defaults
-    webm.output = None
+    webm.inputs = kwargs["input"]
+    webm.output = kwargs["output"]
+    webm.encoder = kwargs["encoder"]
+    webm.crf = kwargs["crf"]
+    webm.size_limit = kwargs["size_limit"]
+    webm.lavfi = kwargs["lavfi"]
+    webm.ss = kwargs["start_time"]
+    webm.to = kwargs["stop_time"]
+    webm.extra_params = kwargs["extra_params"]
+
     webm.twopass = True
     webm.input_seeking = True
-    webm.duration = None
     webm.params = (
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
     )
-
-    webm.encoder = kwargs.get("encoder", "libvpx-vp9")
-    webm.crf = kwargs.get("crf", "24")
-    webm.size_limit = kwargs.get("size_limit", "3")  # In megabytes
-    webm.lavfi = kwargs.get("lavfi", None)
-    webm.ss = kwargs.get("ss", None)
-    webm.to = kwargs.get("to", None)
-    webm.extra_params = kwargs.get("extra_params", None)
 
     if webm.extra_params and "-c:v" in webm.extra_params:
         encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
@@ -146,16 +145,13 @@ def prepare(webm, kwargs):
     if webm.lavfi and "subtitle" in webm.lavfi:
         webm.input_seeking = False
 
-    if "libvpx" not in webm.encoder or (
-        webm.extra_params and "libvpx" not in webm.extra_params
-    ):
+    if "libvpx" not in webm.encoder:
         webm.twopass = False
         webm.input_seeking = False
-        webm.crf = "18" if "crf" not in kwargs else webm.crf
         webm.params = "-f matroska -map 0 -c copy -preset veryslow"
 
-    start, duration = get_duration(webm.inputs[0])
-    if duration is None:
+    start, stop = get_duration(webm.inputs[0])
+    if stop is None:
         print(
             "An unexpected error occurred whilst retrieving "
             f"the metadata for the input file {webm.inputs[0].absolute()}",
@@ -166,10 +162,10 @@ def prepare(webm, kwargs):
     if webm.ss is None:
         webm.ss = start
     if webm.to is None:
-        webm.to = duration
+        webm.to = stop
 
-    if "output" in kwargs:
-        webm.output = pathlib.Path(kwargs["output"])
+    if webm.output:
+        webm.output = pathlib.Path(webm.output)
     else:
         webm.output = generate_filename(
             webm.ss,
@@ -279,26 +275,57 @@ def get_key():
 def parse_argv():
     """Parses the command line arguments"""
 
-    if len(sys.argv) == 2 and sys.argv[1].startswith("-"):
-        match sys.argv[1]:
-            case "--version" | "-v":
-                print_version()
-                sys.exit(os.EX_OK)
+    parser = argparse.ArgumentParser(
+        description="Utility to encode quick webms with ffmpeg"
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"PureWebM {__version__}"
+    )
 
-    try:
-        kwargs = dict(arg.split("=") for arg in sys.argv[1:])
+    parser.add_argument(
+        "input",
+        nargs="+",
+        help="the input file(s) to encode (NOTE: these are only for a single "
+        "output file; to encode different files run this program multiple "
+        "times, the files will be queued in the main process using a Unix "
+        "socket)",
+    )
+    parser.add_argument(
+        "--output",
+        help="the output file, if not set, the filename will be generated "
+        "using the filename of the input file plus a short MD5 hash and saved "
+        f"in {pathlib.Path('~/Videos/PureWebM').expanduser()}",
+    )
 
-    except ValueError:
-        print("keyword arguments must be supplied", file=sys.stderr)
-        print_usage()
-        sys.exit(os.EX_USAGE)
+    parser.add_argument(
+        "--encoder",
+        default="libvpx-vp9",
+        help="the encoder to use (default is libvpx-vp9)",
+    )
+    parser.add_argument(
+        "--start_time", help="the start time offset (same as ffmpeg's -ss)"
+    )
+    parser.add_argument(
+        "--stop_time", help="the stop time (same as ffmpeg's -to)"
+    )
+    parser.add_argument("--lavfi", help="the set of filters to pass to ffmpeg")
+    parser.add_argument(
+        "--size_limit",
+        default=3,
+        type=float,
+        help="the size limit of the output file in megabytes, use 0 for no "
+        "limit (default is 3)",
+    )
+    parser.add_argument(
+        "--crf", default="24", help="the crf to use (default is 24)"
+    )
+    parser.add_argument(
+        "--extra_params",
+        help="the extra parameters to pass to ffmpeg, these will be appended "
+        "to the end of command's parameters",
+    )
 
-    if "input" not in kwargs:
-        print("An input file must be supplied to proceed", file=sys.stderr)
-        print_usage()
-        sys.exit(os.EX_USAGE)
-
-    return kwargs
+    return vars(parser.parse_args())
 
 
 def verify_config():
@@ -319,12 +346,7 @@ def print_usage(full=False):
     """Prints instructions"""
 
     if not full:
-        print("\nUsage: -")
-
-
-def print_version():
-    """Prints the package version"""
-    print(f"PureWebM {__version__}")
+        print(f"\nUsage: {__name__} input=video.mkv")
 
 
 if __name__ == "__main__":
