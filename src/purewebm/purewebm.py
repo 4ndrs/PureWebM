@@ -114,7 +114,7 @@ def encode(queue, encoding_done):
                 first_pass, second_pass = generate_ffmpeg_args(webm)
                 encode_two_pass(
                     first_command=first_pass,
-                    second_pass=second_pass,
+                    second_command=second_pass,
                     output_file=webm.output,
                     size_limit=size_limit,
                     duration=duration,
@@ -144,7 +144,7 @@ def encode(queue, encoding_done):
 def encode_two_pass(**kwargs):
     """Handles the two pass encoding"""
     first_command = kwargs["first_command"]
-    second_command = kwargs["first_command"]
+    second_command = kwargs["second_command"]
     output_file = kwargs["output_file"]
     size_limit = kwargs["size_limit"]
     duration = kwargs["duration"]
