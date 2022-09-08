@@ -36,7 +36,7 @@ def main():
 
     queue = manager.Namespace()
     queue.items = manager.list()
-    queue.total_size = 0
+    queue.total_size = manager.Value(int, 0)
     enqueue(queue, kwargs)
 
     listen_process = Process(target=listen, args=(queue, socket))
@@ -66,7 +66,7 @@ def enqueue(queue, kwargs):
     webm = prepare(webm, kwargs)
 
     queue.items.append(webm)
-    queue.total_size += 1
+    queue.total_size.set(queue.total_size.get() + 1)
 
 
 def listen(queue, socket):
@@ -689,11 +689,11 @@ def verify_config():
             sys.exit(os.EX_CANTCREAT)
 
 
-def print_progress(message, progress, size):
+def print_progress(message, progress, total_size):
     """Prints the encoding progress with a customized message"""
     clear_line = "\r\033[K"
     print(
-        f"{clear_line}Encoding {progress} of {size}: {message}",
+        f"{clear_line}Encoding {progress} of {total_size.get()}: {message}",
         end="",
         flush=True,
     )
