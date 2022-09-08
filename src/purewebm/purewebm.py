@@ -210,10 +210,11 @@ def run_second_pass(**kwargs):
 
     bitrate = 0
 
+    # insert -b:v 0 after the crf to trigger constant quality mode
+    command.insert(command.index("-crf") + 2, "-b:v")
+    command.insert(command.index("-b:v") + 1, "0")
+
     if not size_limit:
-        # insert -b:v 0 after the crf to trigger constant quality mode
-        command.insert(command.index("-crf") + 2, "-b:v")
-        command.insert(command.index("-b:v") + 1, "0")
         run_ffmpeg(
             command=command,
             color=color,
@@ -225,10 +226,7 @@ def run_second_pass(**kwargs):
         )
 
     else:
-        # Try encoding just with the crf first
-        command.insert(command.index("-crf") + 2, "-b:v")
-        command.insert(command.index("-b:v") + 1, "0")
-
+        # Try encoding just in constant quality mode first
         run_ffmpeg(
             command=command,
             color=color,
