@@ -110,7 +110,7 @@ def encode(queue, encoding_done):
             size_limit = webm.size_limit * 1024
             encoding += 1
 
-            if webm.twopass:
+            if webm.two_pass:
                 first_pass, second_pass = generate_ffmpeg_args(webm)
                 encode_two_pass(
                     first_command=first_pass,
@@ -222,7 +222,7 @@ def run_second_pass(**kwargs):
             duration=duration,
             encoding=encoding,
             total_size=total_size,
-            twopass=True,
+            two_pass=True,
         )
 
     else:
@@ -234,7 +234,7 @@ def run_second_pass(**kwargs):
             duration=duration,
             encoding=encoding,
             total_size=total_size,
-            twopass=True,
+            two_pass=True,
         )
 
         # Check that the file generated is within the limit
@@ -287,7 +287,7 @@ def run_second_pass(**kwargs):
                 duration=duration,
                 encoding=encoding,
                 total_size=total_size,
-                twopass=True,
+                two_pass=True,
             )
 
             # Check that the file size is within the limit
@@ -345,7 +345,7 @@ def encode_single_pass(**kwargs):
         duration=duration,
         encoding=encoding,
         total_size=total_size,
-        twopass=False,
+        two_pass=False,
     )
 
     print_progress(
@@ -364,7 +364,7 @@ def run_ffmpeg(**kwargs):
     duration = kwargs["duration"]
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
-    twopass = kwargs["twopass"]
+    two_pass = kwargs["two_pass"]
 
     with subprocess.Popen(  # nosec
         command,
@@ -377,7 +377,7 @@ def run_ffmpeg(**kwargs):
             progress, size = get_progress(line)
             if progress is None:
                 continue
-            if limit and twopass:
+            if limit and two_pass:
                 if size > limit:
                     task.terminate()
             percent = round(get_seconds(progress) * 100 / duration)
@@ -400,7 +400,7 @@ def prepare(webm, kwargs):
     webm.to = kwargs["stop_time"]
     webm.extra_params = kwargs["extra_params"]
 
-    webm.twopass = True
+    webm.two_pass = True
     webm.input_seeking = True
     webm.params = (
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
@@ -421,7 +421,7 @@ def prepare(webm, kwargs):
         webm.input_seeking = False
 
     if "libvpx" not in webm.encoder:
-        webm.twopass = False
+        webm.two_pass = False
         webm.input_seeking = False
         webm.params = "-f matroska -map 0 -c copy -preset veryslow"
 
@@ -486,7 +486,7 @@ def generate_ffmpeg_args(webm):
     ffmpeg_args += ["-crf", webm.crf]
     ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
 
-    if webm.twopass:
+    if webm.two_pass:
         first_pass = ffmpeg_args + [
             "-pass",
             "1",
