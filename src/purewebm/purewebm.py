@@ -409,12 +409,10 @@ def prepare(webm, kwargs):
     if webm.extra_params:
         if "-c:v" in webm.extra_params:
             encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
-            if encoder:
-                webm.encoder = encoder[1]
+            webm.encoder = encoder if encoder else webm.encoder
         if "-crf" in webm.extra_params:
             crf = re.search(r"-crf\s+(\d+)", webm.extra_params)
-            if crf:
-                webm.crf = crf[1]
+            crf = crf if crf else webm.crf
 
     # To sync the burned subtitles need output seeking
     if webm.lavfi and "subtitle" in webm.lavfi:
@@ -426,7 +424,7 @@ def prepare(webm, kwargs):
         webm.params = "-f matroska -map 0 -c copy -preset veryslow"
 
     start, stop = get_duration(webm.inputs[0])
-    if stop is None:
+    if None in (start, stop):
         print(
             "An unexpected error occurred whilst retrieving "
             f"the metadata for the input file {webm.inputs[0].absolute()}",
@@ -434,10 +432,8 @@ def prepare(webm, kwargs):
         )
         sys.exit(os.EX_SOFTWARE)
 
-    if webm.ss is None:
-        webm.ss = start
-    if webm.to is None:
-        webm.to = stop
+    webm.ss = start if webm.ss is None else webm.ss
+    webm.to = stop if webm.to is None else webm.to
 
     if webm.output is None:
         if "http" in str(webm.inputs[0]):
