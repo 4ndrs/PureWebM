@@ -369,12 +369,16 @@ def prepare(webm, kwargs):
         webm.to = stop
 
     if webm.output is None:
+        if "http" in str(webm.inputs[0]):
+            input_filename = "http_vid"
+        else:
+            input_filename = webm.inputs[0].absolute().stem
         webm.output = generate_filename(
             webm.ss,
             webm.to,
             webm.extra_params,
             encoder=webm.encoder,
-            input_filename=webm.inputs[0].absolute().stem,
+            input_filename=input_filename,
             save_path=pathlib.Path("~/Videos/PureWebM").expanduser(),
         )
 
@@ -588,9 +592,12 @@ def parse_argv():
     )
 
     kwargs = vars(parser.parse_args())
-    kwargs["input"] = [
-        pathlib.Path(path).absolute() for path in kwargs["input"]
-    ]
+    if "http" in kwargs["input"][0]:
+        kwargs["input"] = [pathlib.Path(url) for url in kwargs["input"]]
+    else:
+        kwargs["input"] = [
+            pathlib.Path(path).absolute() for path in kwargs["input"]
+        ]
     if kwargs["output"]:
         kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
 
