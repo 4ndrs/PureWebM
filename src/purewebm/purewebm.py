@@ -36,7 +36,7 @@ def main():
 
     queue = manager.Namespace()
     queue.items = manager.list()
-    queue.total_size = 0
+    queue.total_size = manager.Value(int, 0)
     enqueue(queue, kwargs)
 
     listen_process = Process(target=listen, args=(queue, socket))
@@ -66,7 +66,7 @@ def enqueue(queue, kwargs):
     webm = prepare(webm, kwargs)
 
     queue.items.append(webm)
-    queue.total_size += 1
+    queue.total_size.set(queue.total_size.get() + 1)
 
 
 def listen(queue, socket):
@@ -81,7 +81,7 @@ def listen(queue, socket):
                     kwargs = conn.recv()
                     enqueue(queue, kwargs)
         except KeyboardInterrupt:
-            pass
+            pass  # The keyboard interrupt message is handled by main()
 
 
 def send(kwargs, socket):
@@ -93,208 +93,279 @@ def send(kwargs, socket):
         conn.send(kwargs)
 
 
-# Needs refactoring
-# pylint: disable=too-many-statements
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-branches
 def encode(queue, encoding_done):
-    """Encodes the webms in the queue list"""
+    """Processes the encodings for the webms in the queue list"""
+    encoding = 0
     color = {
         "green": "\033[1;92m",
         "blue": "\033[1;94m",
         "red": "\033[1;91m",
         "endc": "\033[0m",
     }
-    encoding = 0
+
     try:
         while queue.items:
             webm = queue.items.pop(0)
             duration = get_seconds(webm.to) - get_seconds(webm.ss)
+            size_limit = webm.size_limit * 1024
             encoding += 1
 
-            if webm.twopass:
+            if webm.two_pass:
                 first_pass, second_pass = generate_ffmpeg_args(webm)
-
-                print_progress(
-                    f"{color['blue']}processing the first pass{color['endc']}",
-                    encoding,
-                    queue.total_size,
+                encode_two_pass(
+                    first_command=first_pass,
+                    second_command=second_pass,
+                    output_file=webm.output,
+                    size_limit=size_limit,
+                    duration=duration,
+                    crf=webm.crf,
+                    encoding=encoding,
+                    color=color,
+                    total_size=queue.total_size,
                 )
-
-                # command = " ".join((str(arg) for arg in first_pass))
-                try:
-                    subprocess.run(  # nosec
-                        first_pass,
-                        check=True,
-                        capture_output=True,
-                    )
-                except subprocess.CalledProcessError as error:
-                    print_progress(
-                        f"{color['red']}Error running the first pass:",
-                        encoding,
-                        queue.total_size,
-                    )
-                    print(f"\n{error.stderr.decode()}{color['endc']}", end="")
-                    # error_message = get_error(error.stderr.decode())
-                    # if error_message:
-                    #    print("\n" + error_message, end=color["endc"])
-                    continue
-
-                bitrate = 0
-
-                if not webm.size_limit:
-                    run_ffmpeg(
-                        second_pass,
-                        color,
-                        webm,
-                        encoding,
-                        queue.total_size,
-                    )
-
-                else:
-                    size_limit = webm.size_limit * 1024  # convert to kilobytes
-                    crf_failed = False
-
-                    while True:
-                        # Try encoding just with the crf
-                        if not crf_failed:
-                            # insert -b:v 0 to trigger constant quality mode
-                            second_pass.insert(
-                                second_pass.index("-crf") + 2, "-b:v"
-                            )
-                            second_pass.insert(
-                                second_pass.index("-b:v") + 1, "0"
-                            )
-
-                            run_ffmpeg(
-                                second_pass,
-                                color,
-                                webm,
-                                encoding,
-                                queue.total_size,
-                            )
-
-                            # Check the file size is within the limit
-                            size = webm.output.stat().st_size / 1024
-                            if size > size_limit:
-                                percent = (
-                                    (size - size_limit) / size_limit
-                                ) * 100
-                                percent_txt = (
-                                    round(percent)
-                                    if round(percent) > 1
-                                    else round(percent, 3)
-                                )
-                                print_progress(
-                                    f"{color['red']}File size is "
-                                    "greater than the limit by "
-                                    f"{percent_txt}% with crf {webm.crf}"
-                                    f"{color['endc']}\n",
-                                    encoding,
-                                    queue.total_size,
-                                )
-                                second_pass[
-                                    second_pass.index("-crf") + 1
-                                ] = "10"
-                                percent = None
-                                crf_failed = True
-                            else:
-                                # File size is within the limit
-                                break
-                        else:
-                            if percent:
-                                bitrate -= percent / 100 * bitrate
-                            else:
-                                bitrate = (
-                                    size_limit / duration * 8 * 1024 / 1000
-                                )
-
-                            print_progress(
-                                f"{color['red']}Retrying with bitrate "
-                                f"{round(bitrate)}K{color['endc']}\n",
-                                encoding,
-                                queue.total_size,
-                            )
-
-                            # Find the last -b:v and update
-                            index = len(second_pass) - second_pass[::-1].index(
-                                "-b:v"
-                            )
-                            second_pass[index] = str(round(bitrate, 3)) + "K"
-                            run_ffmpeg(
-                                second_pass,
-                                color,
-                                webm,
-                                encoding,
-                                queue.total_size,
-                            )
-
-                            size = webm.output.stat().st_size / 1024
-                            if size > size_limit:
-                                percent = (
-                                    (size - size_limit) / size_limit
-                                ) * 100
-                                percent_txt = (
-                                    round(percent)
-                                    if round(percent) > 1
-                                    else round(percent, 3)
-                                )
-                                print_progress(
-                                    f"{color['red']}File size is "
-                                    f"greater than the limit by "
-                                    f"{percent_txt}% with bitrate "
-                                    f"{round(bitrate)}K{color['endc']}\n",
-                                    encoding,
-                                    queue.total_size,
-                                )
-                            else:
-                                break
-
-                # Two-pass encoding done
-                print_progress(
-                    f"{color['green']}100%{color['endc']}",
-                    encoding,
-                    queue.total_size,
-                )
-                # Delete the first pass log file
-                pathlib.Path("PureWebM2pass-0.log").unlink()
 
             else:
                 single_pass = generate_ffmpeg_args(webm)
-                # command = " ".join((str(arg) for arg in single_pass))
-
-                print_progress(
-                    f"{color['blue']}processing the single "
-                    f"pass{color['endc']}",
-                    encoding,
-                    queue.total_size,
-                )
-                # Single pass has no size limit, just constant quality with crf
-                single_pass.insert(single_pass.index("-crf") + 2, "-b:v")
-                single_pass.insert(single_pass.index("-b:v") + 1, "0")
-                run_ffmpeg(
-                    single_pass, color, webm, encoding, queue.total_size
-                )
-
-                # Single pass encoding done
-                print_progress(
-                    f"{color['green']}100%{color['endc']}",
-                    encoding,
-                    queue.total_size,
+                encode_single_pass(
+                    command=single_pass,
+                    color=color,
+                    duration=duration,
+                    encoding=encoding,
+                    total_size=queue.total_size,
                 )
 
     except KeyboardInterrupt:
-        pass
+        pass  # The keyboard interrupt message is handled by main()
     finally:
         print(end="\n")
         encoding_done.set()
 
 
-def run_ffmpeg(command, color, webm, encoding, total_size):
+def encode_two_pass(**kwargs):
+    """Handles the two pass encoding"""
+    first_command = kwargs["first_command"]
+    second_command = kwargs["second_command"]
+    output_file = kwargs["output_file"]
+    size_limit = kwargs["size_limit"]
+    duration = kwargs["duration"]
+    crf = kwargs["crf"]
+    encoding = kwargs["encoding"]
+    color = kwargs["color"]
+    total_size = kwargs["total_size"]
+
+    if run_first_pass(first_command, encoding, color, total_size):
+        run_second_pass(
+            command=second_command,
+            crf=crf,
+            output_file=output_file,
+            encoding=encoding,
+            color=color,
+            size_limit=size_limit,
+            total_size=total_size,
+            duration=duration,
+        )
+
+
+def run_first_pass(command, encoding, color, total_size):
+    """Returns True if the first pass processes successfully, False
+    otherwise"""
+    print_progress(
+        f"{color['blue']}processing the first pass{color['endc']}",
+        encoding,
+        total_size,
+    )
+
+    try:
+        subprocess.run(  # nosec
+            command,
+            check=True,
+            capture_output=True,
+        )
+
+    except subprocess.CalledProcessError as error:
+        print_progress(
+            f"{color['red']}Error running the first pass:",
+            encoding,
+            total_size,
+        )
+        print(f"\n{error.stderr.decode()}{color['endc']}", end="")
+        return False
+
+    return True
+
+
+def run_second_pass(**kwargs):
+    """Processes the second pass. If there is no size limit, it will trigger
+    constant quality mode setting b:v 0 and using just the crf. If there is a
+    size limit, it will try to encode the file again and again with a
+    recalculated bitrate until it is within the size limit."""
+    command = kwargs["command"]
+    crf = kwargs["crf"]
+    output_file = kwargs["output_file"]
+    encoding = kwargs["encoding"]
+    color = kwargs["color"]
+    size_limit = kwargs["size_limit"]
+    total_size = kwargs["total_size"]
+    duration = kwargs["duration"]
+
+    bitrate = 0
+
+    # insert -b:v 0 after the crf to trigger constant quality mode
+    command.insert(command.index("-crf") + 2, "-b:v")
+    command.insert(command.index("-b:v") + 1, "0")
+
+    if not size_limit:
+        run_ffmpeg(
+            command=command,
+            color=color,
+            size_limit=0,
+            duration=duration,
+            encoding=encoding,
+            total_size=total_size,
+            two_pass=True,
+        )
+
+    else:
+        # Try encoding just in constant quality mode first
+        run_ffmpeg(
+            command=command,
+            color=color,
+            size_limit=size_limit,
+            duration=duration,
+            encoding=encoding,
+            total_size=total_size,
+            two_pass=True,
+        )
+
+        # Check that the file generated is within the limit
+        size = output_file.stat().st_size / 1024
+        if size > size_limit:
+            percent = ((size - size_limit) / size_limit) * 100
+            percent_txt = (
+                round(percent) if round(percent) > 1 else round(percent, 3)
+            )
+            print_progress(
+                f"{color['red']}File size is "
+                "greater than the limit by "
+                f"{percent_txt}% with crf {crf}"
+                f"{color['endc']}\n",
+                encoding,
+                total_size,
+            )
+
+            # Set the crf to 10, for a targeted bitrate next
+            if crf != "10":
+                command[command.index("-crf") + 1] = "10"
+
+            percent = None
+            failed = True
+
+        else:
+            failed = False
+
+        while failed:
+            if percent:
+                bitrate -= percent / 100 * bitrate
+            else:
+                bitrate = size_limit / duration * 8 * 1024 / 1000
+
+            print_progress(
+                f"{color['red']}Retrying with bitrate "
+                f"{round(bitrate)}K{color['endc']}\n",
+                encoding,
+                total_size,
+            )
+
+            # Find the last b:v index and update
+            index = len(command) - command[::-1].index("-b:v")
+            command[index] = str(round(bitrate, 3)) + "K"
+
+            run_ffmpeg(
+                command=command,
+                color=color,
+                size_limit=size_limit,
+                duration=duration,
+                encoding=encoding,
+                total_size=total_size,
+                two_pass=True,
+            )
+
+            # Check that the file size is within the limit
+            size = output_file.stat().st_size / 1024
+            if size > size_limit:
+                percent = ((size - size_limit) / size_limit) * 100
+                percent_txt = (
+                    round(percent) if round(percent) > 1 else round(percent, 3)
+                )
+                print_progress(
+                    f"{color['red']}File size is "
+                    f"greater than the limit by "
+                    f"{percent_txt}% with bitrate "
+                    f"{round(bitrate)}K{color['endc']}\n",
+                    encoding,
+                    total_size,
+                )
+
+            else:
+                failed = False
+
+    # Two-pass encoding done
+    print_progress(
+        f"{color['green']}100%{color['endc']}",
+        encoding,
+        total_size,
+    )
+
+    # Delete the first pass log file
+    pathlib.Path("PureWebM2pass-0.log").unlink()
+
+
+def encode_single_pass(**kwargs):
+    """Handles the single pass"""
+    command = kwargs["command"]
+    color = kwargs["color"]
+    duration = kwargs["duration"]
+    encoding = kwargs["encoding"]
+    total_size = kwargs["total_size"]
+
+    print_progress(
+        f"{color['blue']}processing the single pass{color['endc']}",
+        encoding,
+        total_size,
+    )
+
+    # Single pass has no size limit, just constant quality with crf
+    command.insert(command.index("-crf") + 2, "-b:v")
+    command.insert(command.index("-b:v") + 1, "0")
+
+    run_ffmpeg(
+        command=command,
+        color=color,
+        size_limit=0,
+        duration=duration,
+        encoding=encoding,
+        total_size=total_size,
+        two_pass=False,
+    )
+
+    print_progress(
+        f"{color['green']}100%{color['endc']}",
+        encoding,
+        total_size,
+    )
+
+
+def run_ffmpeg(**kwargs):
     """Runs ffmpeg with the specified command and prints the progress on the
     screen"""
-    limit = webm.size_limit * 1024
-    duration = get_seconds(webm.to) - get_seconds(webm.ss)
+    command = kwargs["command"]
+    color = kwargs["color"]
+    limit = kwargs["size_limit"]
+    duration = kwargs["duration"]
+    encoding = kwargs["encoding"]
+    total_size = kwargs["total_size"]
+    two_pass = kwargs["two_pass"]
+
     with subprocess.Popen(  # nosec
         command,
         universal_newlines=True,
@@ -306,7 +377,7 @@ def run_ffmpeg(command, color, webm, encoding, total_size):
             progress, size = get_progress(line)
             if progress is None:
                 continue
-            if limit and webm.twopass:
+            if limit and two_pass:
                 if size > limit:
                     task.terminate()
             percent = round(get_seconds(progress) * 100 / duration)
@@ -329,7 +400,7 @@ def prepare(webm, kwargs):
     webm.to = kwargs["stop_time"]
     webm.extra_params = kwargs["extra_params"]
 
-    webm.twopass = True
+    webm.two_pass = True
     webm.input_seeking = True
     webm.params = (
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
@@ -338,24 +409,22 @@ def prepare(webm, kwargs):
     if webm.extra_params:
         if "-c:v" in webm.extra_params:
             encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
-            if encoder:
-                webm.encoder = encoder[1]
+            webm.encoder = encoder if encoder else webm.encoder
         if "-crf" in webm.extra_params:
             crf = re.search(r"-crf\s+(\d+)", webm.extra_params)
-            if crf:
-                webm.crf = crf[1]
+            crf = crf if crf else webm.crf
 
     # To sync the burned subtitles need output seeking
     if webm.lavfi and "subtitle" in webm.lavfi:
         webm.input_seeking = False
 
     if "libvpx" not in webm.encoder:
-        webm.twopass = False
+        webm.two_pass = False
         webm.input_seeking = False
         webm.params = "-f matroska -map 0 -c copy -preset veryslow"
 
     start, stop = get_duration(webm.inputs[0])
-    if stop is None:
+    if None in (start, stop):
         print(
             "An unexpected error occurred whilst retrieving "
             f"the metadata for the input file {webm.inputs[0].absolute()}",
@@ -363,10 +432,8 @@ def prepare(webm, kwargs):
         )
         sys.exit(os.EX_SOFTWARE)
 
-    if webm.ss is None:
-        webm.ss = start
-    if webm.to is None:
-        webm.to = stop
+    webm.ss = start if webm.ss is None else webm.ss
+    webm.to = stop if webm.to is None else webm.to
 
     if webm.output is None:
         if "http" in str(webm.inputs[0]):
@@ -415,7 +482,7 @@ def generate_ffmpeg_args(webm):
     ffmpeg_args += ["-crf", webm.crf]
     ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
 
-    if webm.twopass:
+    if webm.two_pass:
         first_pass = ffmpeg_args + [
             "-pass",
             "1",
@@ -618,11 +685,11 @@ def verify_config():
             sys.exit(os.EX_CANTCREAT)
 
 
-def print_progress(message, progress, size):
+def print_progress(message, progress, total_size):
     """Prints the encoding progress with a customized message"""
     clear_line = "\r\033[K"
     print(
-        f"{clear_line}Encoding {progress} of {size}: {message}",
+        f"{clear_line}Encoding {progress} of {total_size.get()}: {message}",
         end="",
         flush=True,
     )
