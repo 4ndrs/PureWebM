@@ -134,9 +134,10 @@ def encode(queue, encoding_done):
                         encoding,
                         queue.total_size,
                     )
-                    error_message = get_error(error.stderr.decode())
-                    if error_message:
-                        print("\n" + error_message, end=color["endc"])
+                    print(f"\n{error.stderr.decode()}{color['endc']}", end="")
+                    # error_message = get_error(error.stderr.decode())
+                    # if error_message:
+                    #    print("\n" + error_message, end=color["endc"])
                     continue
 
                 bitrate = 0
@@ -145,7 +146,7 @@ def encode(queue, encoding_done):
                     run_ffmpeg(
                         second_pass,
                         color,
-                        duration,
+                        webm,
                         encoding,
                         queue.total_size,
                     )
@@ -168,7 +169,7 @@ def encode(queue, encoding_done):
                             run_ffmpeg(
                                 second_pass,
                                 color,
-                                duration,
+                                webm,
                                 encoding,
                                 queue.total_size,
                             )
@@ -185,13 +186,16 @@ def encode(queue, encoding_done):
                                     else round(percent, 3)
                                 )
                                 print_progress(
-                                    f"{color['red']}Final file size is "
+                                    f"{color['red']}File size is "
                                     "greater than the limit by "
                                     f"{percent_txt}% with crf {webm.crf}"
                                     f"{color['endc']}\n",
                                     encoding,
                                     queue.total_size,
                                 )
+                                second_pass[
+                                    second_pass.index("-crf") + 1
+                                ] = "10"
                                 percent = None
                                 crf_failed = True
                             else:
@@ -212,13 +216,15 @@ def encode(queue, encoding_done):
                                 queue.total_size,
                             )
 
-                            second_pass[second_pass.index("-b:v") + 1] = (
-                                str(round(bitrate, 3)) + "K"
+                            # Find the last -b:v and update
+                            index = len(second_pass) - second_pass[::-1].index(
+                                "-b:v"
                             )
+                            second_pass[index] = str(round(bitrate, 3)) + "K"
                             run_ffmpeg(
                                 second_pass,
                                 color,
-                                duration,
+                                webm,
                                 encoding,
                                 queue.total_size,
                             )
@@ -234,7 +240,7 @@ def encode(queue, encoding_done):
                                     else round(percent, 3)
                                 )
                                 print_progress(
-                                    f"{color['red']}Final file size is "
+                                    f"{color['red']}File size is "
                                     f"greater than the limit by "
                                     f"{percent_txt}% with bitrate "
                                     f"{round(bitrate)}K{color['endc']}\n",
@@ -267,7 +273,7 @@ def encode(queue, encoding_done):
                 single_pass.insert(single_pass.index("-crf") + 2, "-b:v")
                 single_pass.insert(single_pass.index("-b:v") + 1, "0")
                 run_ffmpeg(
-                    single_pass, color, duration, encoding, queue.total_size
+                    single_pass, color, webm, encoding, queue.total_size
                 )
 
                 # Single pass encoding done
@@ -284,9 +290,11 @@ def encode(queue, encoding_done):
         encoding_done.set()
 
 
-def run_ffmpeg(command, color, duration, encoding, total_size):
+def run_ffmpeg(command, color, webm, encoding, total_size):
     """Runs ffmpeg with the specified command and prints the progress on the
     screen"""
+    limit = webm.size_limit * 1024
+    duration = get_seconds(webm.to) - get_seconds(webm.ss)
     with subprocess.Popen(  # nosec
         command,
         universal_newlines=True,
@@ -295,9 +303,12 @@ def run_ffmpeg(command, color, duration, encoding, total_size):
         bufsize=1,
     ) as task:
         for line in task.stdout:
-            progress = get_progress(line)
+            progress, size = get_progress(line)
             if progress is None:
                 continue
+            if limit and webm.twopass:
+                if size > limit:
+                    task.terminate()
             percent = round(get_seconds(progress) * 100 / duration)
             print_progress(
                 f"{color['blue']}{percent}%{color['endc']}",
@@ -324,10 +335,15 @@ def prepare(webm, kwargs):
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
     )
 
-    if webm.extra_params and "-c:v" in webm.extra_params:
-        encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
-        if encoder:
-            webm.encoder = encoder[1]
+    if webm.extra_params:
+        if "-c:v" in webm.extra_params:
+            encoder = re.search(r"-c:v\s+(\w+)", webm.extra_params)
+            if encoder:
+                webm.encoder = encoder[1]
+        if "-crf" in webm.extra_params:
+            crf = re.search(r"-crf\s+(\d+)", webm.extra_params)
+            if crf:
+                webm.crf = crf[1]
 
     # To sync the burned subtitles need output seeking
     if webm.lavfi and "subtitle" in webm.lavfi:
@@ -353,12 +369,16 @@ def prepare(webm, kwargs):
         webm.to = stop
 
     if webm.output is None:
+        if "http" in str(webm.inputs[0]):
+            input_filename = "http_vid"
+        else:
+            input_filename = webm.inputs[0].absolute().stem
         webm.output = generate_filename(
             webm.ss,
             webm.to,
             webm.extra_params,
             encoder=webm.encoder,
-            input_filename=webm.inputs[0].absolute().stem,
+            input_filename=input_filename,
             save_path=pathlib.Path("~/Videos/PureWebM").expanduser(),
         )
 
@@ -392,8 +412,8 @@ def generate_ffmpeg_args(webm):
     ffmpeg_args = ["ffmpeg", "-hide_banner"] + ffmpeg_args
     ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
     ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
-    ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
     ffmpeg_args += ["-crf", webm.crf]
+    ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
 
     if webm.twopass:
         first_pass = ffmpeg_args + [
@@ -454,12 +474,16 @@ def get_duration(file_path):
 
 
 def get_progress(line):
-    """Parses and returns the time progress printed by ffmpeg"""
-    pattern = r"time=(\d{2,}:\d{2}:\d{2}\.\d+)"
+    """Parses and returns the time progress and size printed by ffmpeg"""
+    pattern = (
+        r".*size=\s+(?P<size>\d+)kB\s+"
+        r"time=(?P<time>\d{2,}:\d{2}:\d{2}\.\d+)"
+    )
     found = re.search(pattern, line)
     if found:
-        return found[1]
-    return None
+        found = found.groupdict()
+        return found["time"], int(found["size"])
+    return None, None
 
 
 def get_error(ffmpeg_output):
@@ -568,9 +592,12 @@ def parse_argv():
     )
 
     kwargs = vars(parser.parse_args())
-    kwargs["input"] = [
-        pathlib.Path(path).absolute() for path in kwargs["input"]
-    ]
+    if "http" in kwargs["input"][0]:
+        kwargs["input"] = [pathlib.Path(url) for url in kwargs["input"]]
+    else:
+        kwargs["input"] = [
+            pathlib.Path(path).absolute() for path in kwargs["input"]
+        ]
     if kwargs["output"]:
         kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
 
