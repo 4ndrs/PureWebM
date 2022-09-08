@@ -94,7 +94,7 @@ def send(kwargs, socket):
 
 
 def encode(queue, encoding_done):
-    """Process the encodings for the webms in the queue list"""
+    """Processes the encodings for the webms in the queue list"""
     encoding = 0
     color = {
         "green": "\033[1;92m",
