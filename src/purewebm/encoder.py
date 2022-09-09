@@ -5,12 +5,8 @@
 import pathlib
 import subprocess  # nosec
 
-from .purewebm import (
-    get_seconds,
-    generate_ffmpeg_args,
-    print_progress,
-    run_ffmpeg,
-)
+from .purewebm import get_seconds, print_progress
+from .ffmpeg import run_ffmpeg, generate_ffmpeg_args
 
 
 def encode(queue, encoding_done):
