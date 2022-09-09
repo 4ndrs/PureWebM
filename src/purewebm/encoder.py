@@ -5,8 +5,8 @@
 import pathlib
 import subprocess  # nosec
 
-from .purewebm import get_seconds, print_progress
-from .ffmpeg import run_ffmpeg, generate_ffmpeg_args
+from . import ffmpeg
+from . import purewebm as pw
 
 
 def encode(queue, encoding_done):
@@ -22,12 +22,12 @@ def encode(queue, encoding_done):
     try:
         while queue.items:
             webm = queue.items.pop(0)
-            duration = get_seconds(webm.to) - get_seconds(webm.ss)
+            duration = pw.get_seconds(webm.to) - pw.get_seconds(webm.ss)
             size_limit = webm.size_limit * 1024
             encoding += 1
 
             if webm.two_pass:
-                first_pass, second_pass = generate_ffmpeg_args(webm)
+                first_pass, second_pass = ffmpeg.generate_ffmpeg_args(webm)
                 encode_two_pass(
                     first_command=first_pass,
                     second_command=second_pass,
@@ -41,7 +41,7 @@ def encode(queue, encoding_done):
                 )
 
             else:
-                single_pass = generate_ffmpeg_args(webm)
+                single_pass = ffmpeg.generate_ffmpeg_args(webm)
                 encode_single_pass(
                     command=single_pass,
                     color=color,
@@ -85,7 +85,7 @@ def encode_two_pass(**kwargs):
 def run_first_pass(command, encoding, color, total_size):
     """Returns True if the first pass processes successfully, False
     otherwise"""
-    print_progress(
+    pw.print_progress(
         f"{color['blue']}processing the first pass{color['endc']}",
         encoding,
         total_size,
@@ -99,7 +99,7 @@ def run_first_pass(command, encoding, color, total_size):
         )
 
     except subprocess.CalledProcessError as error:
-        print_progress(
+        pw.print_progress(
             f"{color['red']}Error running the first pass:",
             encoding,
             total_size,
@@ -131,7 +131,7 @@ def run_second_pass(**kwargs):
     command.insert(command.index("-b:v") + 1, "0")
 
     if not size_limit:
-        run_ffmpeg(
+        ffmpeg.run_ffmpeg(
             command=command,
             color=color,
             size_limit=0,
@@ -143,7 +143,7 @@ def run_second_pass(**kwargs):
 
     else:
         # Try encoding just in constant quality mode first
-        run_ffmpeg(
+        ffmpeg.run_ffmpeg(
             command=command,
             color=color,
             size_limit=size_limit,
@@ -160,7 +160,7 @@ def run_second_pass(**kwargs):
             percent_txt = (
                 round(percent) if round(percent) > 1 else round(percent, 3)
             )
-            print_progress(
+            pw.print_progress(
                 f"{color['red']}File size is "
                 "greater than the limit by "
                 f"{percent_txt}% with crf {crf}"
@@ -185,7 +185,7 @@ def run_second_pass(**kwargs):
             else:
                 bitrate = size_limit / duration * 8 * 1024 / 1000
 
-            print_progress(
+            pw.print_progress(
                 f"{color['red']}Retrying with bitrate "
                 f"{round(bitrate)}K{color['endc']}\n",
                 encoding,
@@ -196,7 +196,7 @@ def run_second_pass(**kwargs):
             index = len(command) - command[::-1].index("-b:v")
             command[index] = str(round(bitrate, 3)) + "K"
 
-            run_ffmpeg(
+            ffmpeg.run_ffmpeg(
                 command=command,
                 color=color,
                 size_limit=size_limit,
@@ -213,7 +213,7 @@ def run_second_pass(**kwargs):
                 percent_txt = (
                     round(percent) if round(percent) > 1 else round(percent, 3)
                 )
-                print_progress(
+                pw.print_progress(
                     f"{color['red']}File size is "
                     f"greater than the limit by "
                     f"{percent_txt}% with bitrate "
@@ -226,7 +226,7 @@ def run_second_pass(**kwargs):
                 failed = False
 
     # Two-pass encoding done
-    print_progress(
+    pw.print_progress(
         f"{color['green']}100%{color['endc']}",
         encoding,
         total_size,
@@ -244,7 +244,7 @@ def encode_single_pass(**kwargs):
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
 
-    print_progress(
+    pw.print_progress(
         f"{color['blue']}processing the single pass{color['endc']}",
         encoding,
         total_size,
@@ -254,7 +254,7 @@ def encode_single_pass(**kwargs):
     command.insert(command.index("-crf") + 2, "-b:v")
     command.insert(command.index("-b:v") + 1, "0")
 
-    run_ffmpeg(
+    ffmpeg.run_ffmpeg(
         command=command,
         color=color,
         size_limit=0,
@@ -264,7 +264,7 @@ def encode_single_pass(**kwargs):
         two_pass=False,
     )
 
-    print_progress(
+    pw.print_progress(
         f"{color['green']}100%{color['endc']}",
         encoding,
         total_size,

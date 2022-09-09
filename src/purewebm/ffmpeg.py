@@ -5,7 +5,7 @@
 import re
 import subprocess  # nosec
 
-from .purewebm import print_progress, get_seconds
+from . import purewebm as pw
 
 
 def run_ffmpeg(**kwargs):
@@ -33,8 +33,8 @@ def run_ffmpeg(**kwargs):
             if limit and two_pass:
                 if size > limit:
                     task.terminate()
-            percent = round(get_seconds(progress) * 100 / duration)
-            print_progress(
+            percent = round(pw.get_seconds(progress) * 100 / duration)
+            pw.print_progress(
                 f"{color['blue']}{percent}%{color['endc']}",
                 encoding,
                 total_size,

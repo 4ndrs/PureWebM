@@ -10,20 +10,20 @@ import pathlib
 import argparse
 from multiprocessing import Process, Event, Manager
 
+from . import purewebm
+from . import encoder
 from . import CONFIG_PATH, __version__
-from .purewebm import enqueue, send, listen, verify_config
-from .encoder import encode
 
 
 def main():
     """Main function"""
     kwargs = parse_argv()
 
-    verify_config()
+    purewebm.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
-        send(kwargs, socket)
+        purewebm.send(kwargs, socket)
         print("Encoding information sent to the main process")
         sys.exit(os.EX_OK)
 
@@ -34,17 +34,20 @@ def main():
     queue = manager.Namespace()
     queue.items = manager.list()
     queue.total_size = manager.Value(int, 0)
-    enqueue(queue, kwargs)
+    purewebm.enqueue(queue, kwargs)
 
-    listen_process = Process(target=listen, args=(queue, socket))
-    encode_process = Process(target=encode, args=(queue, encoding_done))
-    listen_process.start()
-    encode_process.start()
+    listener_process = Process(target=purewebm.listen, args=(queue, socket))
+    encoder_process = Process(
+        target=encoder.encode, args=(queue, encoding_done)
+    )
+
+    listener_process.start()
+    encoder_process.start()
 
     try:
         while True:
             if encoding_done.is_set():
-                listen_process.terminate()
+                listener_process.terminate()
                 socket.unlink()
                 sys.exit(os.EX_OK)
 
@@ -52,8 +55,8 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopping (ctrl + c received)", file=sys.stderr)
-        listen_process.terminate()
-        encode_process.terminate()
+        listener_process.terminate()
+        encoder_process.terminate()
         sys.exit(-1)
 
 

@@ -8,7 +8,7 @@ import re
 import hashlib
 import pathlib
 
-from .ffmpeg import get_duration
+from . import ffmpeg
 
 
 def prepare(webm, kwargs):
@@ -46,7 +46,7 @@ def prepare(webm, kwargs):
         webm.input_seeking = False
         webm.params = "-f matroska -map 0 -c copy -preset veryslow"
 
-    start, stop = get_duration(webm.inputs[0])
+    start, stop = ffmpeg.get_duration(webm.inputs[0])
     if None in (start, stop):
         print(
             "An unexpected error occurred whilst retrieving "

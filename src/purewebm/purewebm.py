@@ -8,14 +8,14 @@ import pathlib
 from types import SimpleNamespace
 from multiprocessing.connection import Listener, Client
 
+from . import webm as wbm
 from . import CONFIG_PATH
-from .webm import prepare
 
 
 def enqueue(queue, kwargs):
     """Appends the encoding information to the queue"""
     webm = SimpleNamespace()
-    webm = prepare(webm, kwargs)
+    webm = wbm.prepare(webm, kwargs)
 
     queue.items.append(webm)
     queue.total_size.set(queue.total_size.get() + 1)
