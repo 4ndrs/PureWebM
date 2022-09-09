@@ -11,6 +11,7 @@ import argparse
 from multiprocessing import Process, Event, Manager
 
 from . import ipc
+from . import config
 from . import purewebm
 from . import encoder
 from . import CONFIG_PATH, __version__
@@ -20,7 +21,7 @@ def main():
     """Main function"""
     kwargs = parse_argv()
 
-    purewebm.verify_config()
+    config.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
