@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.scripts]
-purewebm = 'purewebm.purewebm:main'
+purewebm = 'purewebm.__main__:main'
 
 [project.urls]
 'Homepage' = 'https://github.com/4ndrs/PureWebM'
