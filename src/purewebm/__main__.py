@@ -8,15 +8,14 @@ import os
 import time
 import pathlib
 import argparse
-from types import SimpleNamespace
 from multiprocessing import Process, Event, Manager
 
 from . import CONFIG_PATH, __version__
 
 from . import ipc
+from . import video
 from . import config
 from . import encoder
-from . import webm as wbm
 
 
 def main():
@@ -128,18 +127,17 @@ def parse_argv():
         "making it possible to override some defaults",
     )
 
-    kwargs = vars(parser.parse_args())
-    if "http" in kwargs["input"][0]:
-        kwargs["input"] = [pathlib.Path(url) for url in kwargs["input"]]
+    args = vars(parser.parse_args())
+    if "http" in args["input"][0]:
+        args["input"] = [pathlib.Path(url) for url in args["input"]]
     else:
-        kwargs["input"] = [
-            pathlib.Path(path).absolute() for path in kwargs["input"]
+        args["input"] = [
+            pathlib.Path(path).absolute() for path in args["input"]
         ]
-    if kwargs["output"]:
-        kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
+    if args["output"]:
+        args["output"] = pathlib.Path(args["output"]).absolute()
 
-    webm = SimpleNamespace()
-    webm = wbm.prepare(webm, kwargs)
+    webm = video.prepare(args)
 
     return webm
 
