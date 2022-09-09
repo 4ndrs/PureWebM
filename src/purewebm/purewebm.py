@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright (c) 4ndrs <andres.degozaru@gmail.com>
 # SPDX-License-Identifier: MIT
 """Utility to encode quick webms with ffmpeg"""
