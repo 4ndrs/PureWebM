@@ -10,6 +10,7 @@ import pathlib
 import argparse
 from multiprocessing import Process, Event, Manager
 
+from . import ipc
 from . import purewebm
 from . import encoder
 from . import CONFIG_PATH, __version__
@@ -23,7 +24,7 @@ def main():
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
-        purewebm.send(kwargs, socket)
+        ipc.send(kwargs, socket)
         print("Encoding information sent to the main process")
         sys.exit(os.EX_OK)
 
@@ -36,7 +37,7 @@ def main():
     queue.total_size = manager.Value(int, 0)
     purewebm.enqueue(queue, kwargs)
 
-    listener_process = Process(target=purewebm.listen, args=(queue, socket))
+    listener_process = Process(target=ipc.listen, args=(queue, socket))
     encoder_process = Process(
         target=encoder.encode, args=(queue, encoding_done)
     )
