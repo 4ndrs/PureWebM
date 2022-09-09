@@ -1,4 +1,4 @@
-# Copyright (c) 4ndrs <andres.degozaru@gmail.com>
+# Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
 # SPDX-License-Identifier: MIT
 """Module for handling the encodings"""
 
