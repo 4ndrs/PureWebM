@@ -8,7 +8,7 @@ import subprocess  # nosec
 from . import console
 
 
-def run_ffmpeg(**kwargs):
+def run(**kwargs):
     """Runs ffmpeg with the specified command and prints the progress on the
     screen"""
     command = kwargs["command"]
@@ -41,7 +41,7 @@ def run_ffmpeg(**kwargs):
             )
 
 
-def generate_ffmpeg_args(webm):
+def generate_args(webm):
     """Generates the ffmpeg args to pass to subprocess"""
     ffmpeg_args = []
 

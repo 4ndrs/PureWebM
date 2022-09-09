@@ -29,7 +29,7 @@ def encode(queue, encoding_done):
             encoding += 1
 
             if webm.two_pass:
-                first_pass, second_pass = ffmpeg.generate_ffmpeg_args(webm)
+                first_pass, second_pass = ffmpeg.generate_args(webm)
                 encode_two_pass(
                     first_command=first_pass,
                     second_command=second_pass,
@@ -43,7 +43,7 @@ def encode(queue, encoding_done):
                 )
 
             else:
-                single_pass = ffmpeg.generate_ffmpeg_args(webm)
+                single_pass = ffmpeg.generate_args(webm)
                 encode_single_pass(
                     command=single_pass,
                     color=color,
@@ -133,7 +133,7 @@ def run_second_pass(**kwargs):
     command.insert(command.index("-b:v") + 1, "0")
 
     if not size_limit:
-        ffmpeg.run_ffmpeg(
+        ffmpeg.run(
             command=command,
             color=color,
             size_limit=0,
@@ -145,7 +145,7 @@ def run_second_pass(**kwargs):
 
     else:
         # Try encoding just in constant quality mode first
-        ffmpeg.run_ffmpeg(
+        ffmpeg.run(
             command=command,
             color=color,
             size_limit=size_limit,
@@ -198,7 +198,7 @@ def run_second_pass(**kwargs):
             index = len(command) - command[::-1].index("-b:v")
             command[index] = str(round(bitrate, 3)) + "K"
 
-            ffmpeg.run_ffmpeg(
+            ffmpeg.run(
                 command=command,
                 color=color,
                 size_limit=size_limit,
@@ -256,7 +256,7 @@ def encode_single_pass(**kwargs):
     command.insert(command.index("-crf") + 2, "-b:v")
     command.insert(command.index("-b:v") + 1, "0")
 
-    ffmpeg.run_ffmpeg(
+    ffmpeg.run(
         command=command,
         color=color,
         size_limit=0,
