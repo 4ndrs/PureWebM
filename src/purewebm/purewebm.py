@@ -64,28 +64,6 @@ def get_key():
     return key
 
 
-def get_seconds(timestamp):
-    """Converts timestamp to seconds with 3 decimal places"""
-    seconds = sum(
-        (
-            float(num) * (60**index)
-            for index, num in enumerate(reversed(timestamp.split(":")))
-        )
-    )
-
-    return round(seconds, 3)
-
-
-def print_progress(message, progress, total_size):
-    """Prints the encoding progress with a customized message"""
-    clear_line = "\r\033[K"
-    print(
-        f"{clear_line}Encoding {progress} of {total_size.get()}: {message}",
-        end="",
-        flush=True,
-    )
-
-
 def verify_config():
     """Checks the configuration folder, creates it if it doesn't exist"""
     if not CONFIG_PATH.exists():

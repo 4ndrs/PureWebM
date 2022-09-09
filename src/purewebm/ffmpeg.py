@@ -5,7 +5,7 @@
 import re
 import subprocess  # nosec
 
-from . import purewebm as pw
+from . import console
 
 
 def run_ffmpeg(**kwargs):
@@ -33,8 +33,8 @@ def run_ffmpeg(**kwargs):
             if limit and two_pass:
                 if size > limit:
                     task.terminate()
-            percent = round(pw.get_seconds(progress) * 100 / duration)
-            pw.print_progress(
+            percent = round(get_seconds(progress) * 100 / duration)
+            console.print_progress(
                 f"{color['blue']}{percent}%{color['endc']}",
                 encoding,
                 total_size,
@@ -80,6 +80,18 @@ def generate_ffmpeg_args(webm):
         return first_pass, second_pass
 
     return ffmpeg_args + [webm.output, "-y"]
+
+
+def get_seconds(timestamp):
+    """Converts timestamp to seconds with 3 decimal places"""
+    seconds = sum(
+        (
+            float(num) * (60**index)
+            for index, num in enumerate(reversed(timestamp.split(":")))
+        )
+    )
+
+    return round(seconds, 3)
 
 
 def get_progress(line):

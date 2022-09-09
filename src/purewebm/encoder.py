@@ -6,7 +6,7 @@ import pathlib
 import subprocess  # nosec
 
 from . import ffmpeg
-from . import purewebm as pw
+from . import console
 
 
 def encode(queue, encoding_done):
@@ -22,7 +22,9 @@ def encode(queue, encoding_done):
     try:
         while queue.items:
             webm = queue.items.pop(0)
-            duration = pw.get_seconds(webm.to) - pw.get_seconds(webm.ss)
+            duration = ffmpeg.get_seconds(webm.to) - ffmpeg.get_seconds(
+                webm.ss
+            )
             size_limit = webm.size_limit * 1024
             encoding += 1
 
@@ -85,7 +87,7 @@ def encode_two_pass(**kwargs):
 def run_first_pass(command, encoding, color, total_size):
     """Returns True if the first pass processes successfully, False
     otherwise"""
-    pw.print_progress(
+    console.print_progress(
         f"{color['blue']}processing the first pass{color['endc']}",
         encoding,
         total_size,
@@ -99,7 +101,7 @@ def run_first_pass(command, encoding, color, total_size):
         )
 
     except subprocess.CalledProcessError as error:
-        pw.print_progress(
+        console.print_progress(
             f"{color['red']}Error running the first pass:",
             encoding,
             total_size,
@@ -160,7 +162,7 @@ def run_second_pass(**kwargs):
             percent_txt = (
                 round(percent) if round(percent) > 1 else round(percent, 3)
             )
-            pw.print_progress(
+            console.print_progress(
                 f"{color['red']}File size is "
                 "greater than the limit by "
                 f"{percent_txt}% with crf {crf}"
@@ -185,7 +187,7 @@ def run_second_pass(**kwargs):
             else:
                 bitrate = size_limit / duration * 8 * 1024 / 1000
 
-            pw.print_progress(
+            console.print_progress(
                 f"{color['red']}Retrying with bitrate "
                 f"{round(bitrate)}K{color['endc']}\n",
                 encoding,
@@ -213,7 +215,7 @@ def run_second_pass(**kwargs):
                 percent_txt = (
                     round(percent) if round(percent) > 1 else round(percent, 3)
                 )
-                pw.print_progress(
+                console.print_progress(
                     f"{color['red']}File size is "
                     f"greater than the limit by "
                     f"{percent_txt}% with bitrate "
@@ -226,7 +228,7 @@ def run_second_pass(**kwargs):
                 failed = False
 
     # Two-pass encoding done
-    pw.print_progress(
+    console.print_progress(
         f"{color['green']}100%{color['endc']}",
         encoding,
         total_size,
@@ -244,7 +246,7 @@ def encode_single_pass(**kwargs):
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
 
-    pw.print_progress(
+    console.print_progress(
         f"{color['blue']}processing the single pass{color['endc']}",
         encoding,
         total_size,
@@ -264,7 +266,7 @@ def encode_single_pass(**kwargs):
         two_pass=False,
     )
 
-    pw.print_progress(
+    console.print_progress(
         f"{color['green']}100%{color['endc']}",
         encoding,
         total_size,
