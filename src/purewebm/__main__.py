@@ -8,24 +8,26 @@ import os
 import time
 import pathlib
 import argparse
+from types import SimpleNamespace
 from multiprocessing import Process, Event, Manager
+
+from . import CONFIG_PATH, __version__
 
 from . import ipc
 from . import config
-from . import purewebm
 from . import encoder
-from . import CONFIG_PATH, __version__
+from . import webm as wbm
 
 
 def main():
     """Main function"""
-    kwargs = parse_argv()
+    webm = parse_argv()
 
     config.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
-        ipc.send(kwargs, socket)
+        ipc.send(webm, socket)
         print("Encoding information sent to the main process")
         sys.exit(os.EX_OK)
 
@@ -36,7 +38,9 @@ def main():
     queue = manager.Namespace()
     queue.items = manager.list()
     queue.total_size = manager.Value(int, 0)
-    purewebm.enqueue(queue, kwargs)
+
+    queue.items.append(webm)
+    queue.total_size.set(queue.total_size.get() + 1)
 
     listener_p = Process(target=ipc.listen, args=(queue, socket))
     encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
@@ -134,7 +138,10 @@ def parse_argv():
     if kwargs["output"]:
         kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
 
-    return kwargs
+    webm = SimpleNamespace()
+    webm = wbm.prepare(webm, kwargs)
+
+    return webm
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ import os
 import pathlib
 from multiprocessing.connection import Listener, Client
 
-from . import purewebm as pw
 from . import CONFIG_PATH
 
 
@@ -19,19 +18,20 @@ def listen(queue, socket):
         try:
             while True:
                 with listener.accept() as conn:
-                    kwargs = conn.recv()
-                    pw.enqueue(queue, kwargs)
+                    webm = conn.recv()
+                    queue.items.append(webm)
+                    queue.total_size.set(queue.total_size.get() + 1)
         except KeyboardInterrupt:
             pass  # The keyboard interrupt message is handled by main()
 
 
-def send(kwargs, socket):
+def send(webm, socket):
     """Attempts to connect to the Unix socket, and sends the kwargs to the
     main process if successful"""
     socket = str(socket)
     key = get_key()
     with Client(socket, "AF_UNIX", authkey=key) as conn:
-        conn.send(kwargs)
+        conn.send(webm)
 
 
 def get_key():
