@@ -11,7 +11,8 @@ import argparse
 from multiprocessing import Process, Event, Manager
 
 from . import CONFIG_PATH, __version__
-from .purewebm import enqueue, send, listen, encode, verify_config
+from .purewebm import enqueue, send, listen, verify_config
+from .encoder import encode
 
 
 def main():
