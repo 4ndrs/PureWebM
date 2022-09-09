@@ -37,18 +37,16 @@ def main():
     queue.total_size = manager.Value(int, 0)
     purewebm.enqueue(queue, kwargs)
 
-    listener_process = Process(target=ipc.listen, args=(queue, socket))
-    encoder_process = Process(
-        target=encoder.encode, args=(queue, encoding_done)
-    )
+    listener_p = Process(target=ipc.listen, args=(queue, socket))
+    encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
 
-    listener_process.start()
-    encoder_process.start()
+    listener_p.start()
+    encoder_p.start()
 
     try:
         while True:
             if encoding_done.is_set():
-                listener_process.terminate()
+                listener_p.terminate()
                 socket.unlink()
                 sys.exit(os.EX_OK)
 
@@ -56,8 +54,8 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopping (ctrl + c received)", file=sys.stderr)
-        listener_process.terminate()
-        encoder_process.terminate()
+        listener_p.terminate()
+        encoder_p.terminate()
         sys.exit(-1)
 
 
