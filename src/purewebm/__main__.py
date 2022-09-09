@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
+# SPDX-License-Identifier: MIT
 """Main execution file"""
 
 import sys
@@ -8,18 +11,22 @@ import argparse
 from multiprocessing import Process, Event, Manager
 
 from . import CONFIG_PATH, __version__
-from .purewebm import enqueue, send, listen, encode, verify_config
+
+from . import ipc
+from . import video
+from . import config
+from . import encoder
 
 
 def main():
     """Main function"""
-    kwargs = parse_argv()
+    webm = parse_argv()
 
-    verify_config()
+    config.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
-        send(kwargs, socket)
+        ipc.send(webm, socket)
         print("Encoding information sent to the main process")
         sys.exit(os.EX_OK)
 
@@ -30,17 +37,20 @@ def main():
     queue = manager.Namespace()
     queue.items = manager.list()
     queue.total_size = manager.Value(int, 0)
-    enqueue(queue, kwargs)
 
-    listen_process = Process(target=listen, args=(queue, socket))
-    encode_process = Process(target=encode, args=(queue, encoding_done))
-    listen_process.start()
-    encode_process.start()
+    queue.items.append(webm)
+    queue.total_size.set(queue.total_size.get() + 1)
+
+    listener_p = Process(target=ipc.listen, args=(queue, socket))
+    encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
+
+    listener_p.start()
+    encoder_p.start()
 
     try:
         while True:
             if encoding_done.is_set():
-                listen_process.terminate()
+                listener_p.terminate()
                 socket.unlink()
                 sys.exit(os.EX_OK)
 
@@ -48,8 +58,8 @@ def main():
 
     except KeyboardInterrupt:
         print("\nStopping (ctrl + c received)", file=sys.stderr)
-        listen_process.terminate()
-        encode_process.terminate()
+        listener_p.terminate()
+        encoder_p.terminate()
         sys.exit(-1)
 
 
@@ -117,17 +127,19 @@ def parse_argv():
         "making it possible to override some defaults",
     )
 
-    kwargs = vars(parser.parse_args())
-    if "http" in kwargs["input"][0]:
-        kwargs["input"] = [pathlib.Path(url) for url in kwargs["input"]]
+    args = vars(parser.parse_args())
+    if "http" in args["input"][0]:
+        args["input"] = [pathlib.Path(url) for url in args["input"]]
     else:
-        kwargs["input"] = [
-            pathlib.Path(path).absolute() for path in kwargs["input"]
+        args["input"] = [
+            pathlib.Path(path).absolute() for path in args["input"]
         ]
-    if kwargs["output"]:
-        kwargs["output"] = pathlib.Path(kwargs["output"]).absolute()
+    if args["output"]:
+        args["output"] = pathlib.Path(args["output"]).absolute()
 
-    return kwargs
+    webm = video.prepare(args)
+
+    return webm
 
 
 if __name__ == "__main__":
