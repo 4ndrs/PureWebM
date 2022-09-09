@@ -1,3 +1,7 @@
+"""Utility to encode quick webms with ffmpeg.
+
+For usage instructions run: purewebm -h"""
+
 import importlib.metadata
 import pathlib
 
