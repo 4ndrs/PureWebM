@@ -71,7 +71,6 @@ def parse_argv():
     parser.add_argument(
         "--version", "-v", action="version", version=f"PureWebM {__version__}"
     )
-
     parser.add_argument(
         "input",
         nargs="+",
@@ -84,10 +83,19 @@ def parse_argv():
         "--output",
         "-o",
         help="the output file, if not set, the filename will be generated "
-        "using the filename of the input file plus a short MD5 hash and saved "
-        f"in {pathlib.Path('~/Videos/PureWebM').expanduser()}",
+        "according to --name_type and saved in "
+        f"{pathlib.Path('~/Videos/PureWebM').expanduser()}",
     )
-
+    parser.add_argument(
+        "--name_type",
+        "-nt",
+        choices=("unix", "md5"),
+        default="unix",
+        help="the filename type to be generated if the output file is not "
+        "set: unix uses the current time in microseconds since Epoch, md5 "
+        "uses the filename of the input file with a short MD5 hash attached "
+        "(default is unix)",
+    )
     parser.add_argument(
         "--encoder",
         "-e",
