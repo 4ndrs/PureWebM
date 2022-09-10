@@ -1,3 +1,5 @@
+# Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
+# SPDX-License-Identifier: MIT
 """Utility to encode quick webms with ffmpeg.
 
 For usage instructions run: purewebm -h"""
