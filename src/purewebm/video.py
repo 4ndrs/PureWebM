@@ -103,16 +103,15 @@ def generate_filename(*seeds, **kwargs):
     save_path = kwargs["save_path"]
     name_type = kwargs["name_type"]
 
-    match name_type:
-        case "unix":
-            filename = str(time.time_ns())[:16]
-        case "md5":
-            md5 = hashlib.new("md5", usedforsecurity=False)
-            for seed in seeds:
-                md5.update(str(seed).encode())
+    if name_type == "unix":
+        filename = str(time.time_ns())[:16]
+    elif name_type == "md5":
+        md5 = hashlib.new("md5", usedforsecurity=False)
+        for seed in seeds:
+            md5.update(str(seed).encode())
 
-            extension = ".webm" if "libvpx" in encoder else ".mkv"
-            filename = input_filename + "_" + md5.hexdigest()[:10]
+        extension = ".webm" if "libvpx" in encoder else ".mkv"
+        filename = input_filename + "_" + md5.hexdigest()[:10]
 
     extension = ".webm" if "libvpx" in encoder else ".mkv"
     filename += extension
