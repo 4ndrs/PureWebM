@@ -98,7 +98,7 @@ def parse_argv():
     )
     parser.add_argument(
         "--encoder",
-        "-e",
+        "-c:v",
         default="libvpx-vp9",
         help="the encoder to use (default is libvpx-vp9)",
     )
