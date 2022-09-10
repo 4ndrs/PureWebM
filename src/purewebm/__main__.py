@@ -26,9 +26,16 @@ def main():
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
     if socket.exists():
-        ipc.send(webm, socket)
-        print("Encoding information sent to the main process")
-        sys.exit(os.EX_OK)
+        try:
+            ipc.send(webm, socket)
+            print("Encoding information sent to the main process")
+            sys.exit(os.EX_OK)
+        except ConnectionRefusedError:
+            print(
+                "Error connecting to the socket\nStarting a new queue",
+                file=sys.stderr,
+            )
+            socket.unlink()
 
     # Main process does not exist, starting a new queue
     manager = Manager()
