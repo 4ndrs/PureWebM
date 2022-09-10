@@ -4,7 +4,6 @@
 
 import sys
 import os
-import re
 import hashlib
 import pathlib
 from types import SimpleNamespace
@@ -33,12 +32,17 @@ def prepare(args):
     )
 
     if video.extra_params:
-        if "-c:v" in video.extra_params:
-            encoder = re.search(r"-c:v\s+(\w+)", video.extra_params)
-            video.encoder = encoder if encoder else video.encoder
-        if "-crf" in video.extra_params:
-            crf = re.search(r"-crf\s+(\d+)", video.extra_params)
-            crf = crf if crf else video.crf
+        params = video.extra_params.split()
+        video.encoder = (
+            video.encoder
+            if "-c:v" not in params
+            else params[params.index("-c:v") + 1]
+        )
+        video.crf = (
+            video.crf
+            if "-crf" not in params
+            else params[params.index("-crf") + 1]
+        )
 
     # To sync the burned subtitles need output seeking
     if video.lavfi and "subtitle" in video.lavfi:
@@ -47,7 +51,7 @@ def prepare(args):
     if "libvpx" not in video.encoder:
         video.two_pass = False
         video.input_seeking = False
-        video.params = "-f matroska -map 0 -c copy -preset veryslow"
+        video.params = ""
 
     start, stop = ffmpeg.get_duration(video.inputs[0])
     if None in (start, stop):
