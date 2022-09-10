@@ -72,7 +72,9 @@ def parse_argv():
         "--version", "-v", action="version", version=f"PureWebM {__version__}"
     )
     parser.add_argument(
-        "input",
+        "--input",
+        "-i",
+        required=True,
         nargs="+",
         help="the input file(s) to encode (NOTE: these are only for a single "
         "output file; to encode different files run this program multiple "
