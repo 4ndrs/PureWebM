@@ -96,8 +96,13 @@ def prepare(args):
 
 
 def generate_filename(*seeds, **kwargs):
-    """Generates the filename for the output file using an MD5 hash of the seed
-    variables and the name of the input file"""
+    """Generates the filename for the output file according to name_type
+
+    name_type:
+        unix  - generates the file name using the time since Epoch in
+                milliseconds
+        md5   - generates the file name using the input filename plus a short
+                md5 hash generated with the seeds variables"""
     input_filename = kwargs["input_filename"]
     encoder = kwargs["encoder"]
     save_path = kwargs["save_path"]
