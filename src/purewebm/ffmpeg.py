@@ -85,25 +85,25 @@ def run(first_pass=False, **kwargs):
 
 def generate_args(webm):
     """Generates the ffmpeg args to pass to subprocess"""
-    ffmpeg_args = []
+    args = []
 
     # if input seeking put the timestamps in front of the inputs
     if webm.input_seeking:
         for path in webm.inputs:
-            ffmpeg_args += ["-ss", webm.ss, "-to", webm.to, "-i", path]
+            args += ["-ss", webm.ss, "-to", webm.to, "-i", path]
     else:
         for path in webm.inputs:
-            ffmpeg_args += ["-i", path]
-        ffmpeg_args += ["-ss", webm.ss, "-to", webm.to]
+            args += ["-i", path]
+        args += ["-ss", webm.ss, "-to", webm.to]
 
-    ffmpeg_args = [shutil.which("ffmpeg"), "-hide_banner"] + ffmpeg_args
-    ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
-    ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
-    ffmpeg_args += ["-crf", webm.crf]
-    ffmpeg_args += webm.extra_params.split() if webm.extra_params else []
+    args = [shutil.which("ffmpeg"), "-hide_banner"] + args
+    args += webm.params.split() + ["-c:v", webm.encoder]
+    args += ["-lavfi", webm.lavfi] if webm.lavfi else []
+    args += ["-crf", webm.crf]
+    args += webm.extra_params.split() if webm.extra_params else []
 
     if webm.two_pass:
-        first_pass = ffmpeg_args + [
+        first_pass = args + [
             "-pass",
             "1",
             "-passlogfile",
@@ -111,7 +111,7 @@ def generate_args(webm):
             "/dev/null",
             "-y",
         ]
-        second_pass = ffmpeg_args + [
+        second_pass = args + [
             "-pass",
             "2",
             "-passlogfile",
@@ -121,7 +121,7 @@ def generate_args(webm):
         ]
         return first_pass, second_pass
 
-    return ffmpeg_args + [webm.output, "-y"]
+    return args + [webm.output, "-y"]
 
 
 def get_seconds(timestamp):
