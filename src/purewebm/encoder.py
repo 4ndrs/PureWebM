@@ -256,18 +256,29 @@ def encode_single_pass(**kwargs):
     command.insert(command.index("-crf") + 2, "-b:v")
     command.insert(command.index("-b:v") + 1, "0")
 
-    ffmpeg.run(
-        command=command,
-        color=color,
-        size_limit=0,
-        duration=duration,
-        encoding=encoding,
-        total_size=total_size,
-        two_pass=False,
-    )
-
-    console.print_progress(
-        f"{color['green']}100%{color['endc']}",
-        encoding,
-        total_size,
-    )
+    try:
+        ffmpeg.run(
+            command=command,
+            color=color,
+            size_limit=0,
+            duration=duration,
+            encoding=encoding,
+            total_size=total_size,
+            two_pass=False,
+        )
+    except subprocess.CalledProcessError as error:
+        console.print_progress(
+            f"{color['red']}Error encountered during the execution of the "
+            "single pass\n"
+            f"Command: {error.cmd}\n"
+            "Output:\n"
+            f"{error.stderr}{color['endc']}",
+            encoding,
+            total_size,
+        )
+    else:
+        console.print_progress(
+            f"{color['green']}100%{color['endc']}",
+            encoding,
+            total_size,
+        )
