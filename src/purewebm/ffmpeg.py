@@ -57,15 +57,13 @@ def run(first_pass=False, **kwargs):
             output = ""
             for line in task.stdout:
                 output += line
-                progress, size = get_progress(line)
-                if progress is None:
+                time, size = get_progress(line)
+                if time is None:
                     continue
                 if kwargs["size_limit"] and kwargs["two_pass"]:
-                    if size > kwargs["size_limit"]:
+                    if int(size) > kwargs["size_limit"]:
                         task.kill()
-                percent = round(
-                    get_seconds(progress) * 100 / kwargs["duration"]
-                )
+                percent = round(get_seconds(time) * 100 / kwargs["duration"])
                 console.print_progress(
                     f"{percent}%",
                     kwargs["encoding"],
@@ -143,16 +141,18 @@ def get_progress(line):
         r"time=(?P<time>\d{2,}:\d{2}:\d{2}\.\d+)"
     )
     found = re.search(pattern, line)
-    if found:
-        found = found.groupdict()
-        return found["time"], int(found["size"])
-    return None, None
+    time, size = (
+        (None, None)
+        if not found
+        else (found.groupdict()["time"], found.groupdict()["size"])
+    )
+    return time, size
 
 
 def get_duration(file_path):
-    """Retrieves the file's duration and start times with ffmpeg"""
+    """Retrieves the file's start and stop times with ffmpeg"""
     pattern = (
-        r"Duration:\s+(?P<duration>\d{2,}:\d{2}:\d{2}\.\d+),\s+"
+        r"Duration:\s+(?P<stop>\d{2,}:\d{2}:\d{2}\.\d+),\s+"
         r"start:\s+(?P<start>\d+\.\d+)"
     )
 
@@ -162,14 +162,14 @@ def get_duration(file_path):
         capture_output=True,
     ).stderr.decode()
 
-    results = re.search(pattern, ffmpeg_output)
+    found = re.search(pattern, ffmpeg_output)
 
-    if results is None:
-        return None, None
-
-    data = results.groupdict()
-
-    return data["start"], data["duration"]
+    start, stop = (
+        (None, None)
+        if not found
+        else (found.groupdict()["start"], found.groupdict()["stop"])
+    )
+    return start, stop
 
 
 def get_error(ffmpeg_output):
