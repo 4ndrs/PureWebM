@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 """Module for the interfacing with ffmpeg"""
 
+import os
 import re
+import signal
 import shutil
 import subprocess  # nosec
 
@@ -27,7 +29,9 @@ def run(**kwargs):
         stdout=subprocess.PIPE,
         bufsize=1,
     ) as task:
+        output = ""
         for line in task.stdout:
+            output += line
             progress, size = get_progress(line)
             if progress is None:
                 continue
@@ -39,6 +43,15 @@ def run(**kwargs):
                 f"{color['blue']}{percent}%{color['endc']}",
                 encoding,
                 total_size,
+            )
+
+        task.communicate()
+        if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
+            cmd = " ".join(str(arg) for arg in command)
+            raise subprocess.CalledProcessError(
+                returncode=task.returncode,
+                cmd=cmd,
+                stderr=output,
             )
 
 
