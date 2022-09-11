@@ -90,8 +90,8 @@ def parse_argv():
         "Unix sockets)",
     )
     parser.add_argument(
-        "--output",
-        "-o",
+        "output",
+        nargs="?",
         help="the output file, if not set, the filename will be generated "
         "according to --name_type and saved in "
         f"{pathlib.Path('~/Videos/PureWebM').expanduser()}",
