@@ -3,6 +3,7 @@
 """Module for the interfacing with ffmpeg"""
 
 import re
+import shutil
 import subprocess  # nosec
 
 from . import console
@@ -54,7 +55,7 @@ def generate_args(webm):
             ffmpeg_args += ["-i", path]
         ffmpeg_args += ["-ss", webm.ss, "-to", webm.to]
 
-    ffmpeg_args = ["ffmpeg", "-hide_banner"] + ffmpeg_args
+    ffmpeg_args = [shutil.which("ffmpeg"), "-hide_banner"] + ffmpeg_args
     ffmpeg_args += webm.params.split() + ["-c:v", webm.encoder]
     ffmpeg_args += ["-lavfi", webm.lavfi] if webm.lavfi else []
     ffmpeg_args += ["-crf", webm.crf]
