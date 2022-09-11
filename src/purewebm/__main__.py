@@ -82,11 +82,12 @@ def parse_argv():
         "--input",
         "-i",
         required=True,
-        nargs="+",
-        help="the input file(s) to encode (NOTE: these are only for a single "
-        "output file; to encode different files run this program multiple "
-        "times, the files will be queued in the main process using a Unix "
-        "socket)",
+        action="append",
+        help="the input file to encode (NOTE: several files can be selected "
+        "adding more -i flags just like with ffmpeg, these will be only for a "
+        "single output file; to encode different files run this program "
+        "multiple times, the files will be queued in the main process using "
+        "Unix sockets)",
     )
     parser.add_argument(
         "--output",
