@@ -71,7 +71,7 @@ def prepare(args):
             input_filename = "http_vid"
         else:
             input_filename = video.inputs[0].absolute().stem
-        video.output = generate_filename(
+        video.output = _generate_filename(
             video.ss,
             video.to,
             video.extra_params,
@@ -95,7 +95,7 @@ def prepare(args):
     return video
 
 
-def generate_filename(*seeds, **kwargs):
+def _generate_filename(*seeds, **kwargs):
     """Generates the filename for the output file according to name_type
 
     name_type:

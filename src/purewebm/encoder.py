@@ -24,7 +24,7 @@ def encode(queue, encoding_done):
 
             if webm.two_pass:
                 first_pass, second_pass = ffmpeg.generate_args(webm)
-                encode_two_pass(
+                _encode_two_pass(
                     first_command=first_pass,
                     second_command=second_pass,
                     output_file=webm.output,
@@ -37,7 +37,7 @@ def encode(queue, encoding_done):
 
             else:
                 single_pass = ffmpeg.generate_args(webm)
-                encode_single_pass(
+                _encode_single_pass(
                     command=single_pass,
                     duration=duration,
                     encoding=encoding,
@@ -50,7 +50,7 @@ def encode(queue, encoding_done):
         encoding_done.set()
 
 
-def encode_two_pass(**kwargs):
+def _encode_two_pass(**kwargs):
     """Handles the two pass encoding"""
     first_command = kwargs["first_command"]
     second_command = kwargs["second_command"]
@@ -61,8 +61,8 @@ def encode_two_pass(**kwargs):
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
 
-    if run_first_pass(first_command, encoding, total_size):
-        run_second_pass(
+    if _run_first_pass(first_command, encoding, total_size):
+        _run_second_pass(
             command=second_command,
             crf=crf,
             output_file=output_file,
@@ -73,7 +73,7 @@ def encode_two_pass(**kwargs):
         )
 
 
-def run_first_pass(command, encoding, total_size):
+def _run_first_pass(command, encoding, total_size):
     """Returns True if the first pass processes successfully, False
     otherwise"""
     console.print_progress("processing the first pass", encoding, total_size)
@@ -93,7 +93,7 @@ def run_first_pass(command, encoding, total_size):
     return True
 
 
-def run_second_pass(**kwargs):
+def _run_second_pass(**kwargs):
     """Processes the second pass. If there is no size limit, it will trigger
     constant quality mode setting b:v 0 and using just the crf. If there is a
     size limit, it will try to encode the file again and again with a
@@ -209,7 +209,7 @@ def run_second_pass(**kwargs):
     pathlib.Path("PureWebM2pass-0.log").unlink()
 
 
-def encode_single_pass(**kwargs):
+def _encode_single_pass(**kwargs):
     """Handles the single pass"""
     command = kwargs["command"]
     duration = kwargs["duration"]
