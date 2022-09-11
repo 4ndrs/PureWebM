@@ -32,7 +32,7 @@ def run(**kwargs):
                 continue
             if limit and two_pass:
                 if size > limit:
-                    task.terminate()
+                    task.kill()
             percent = round(get_seconds(progress) * 100 / duration)
             console.print_progress(
                 f"{color['blue']}{percent}%{color['endc']}",
