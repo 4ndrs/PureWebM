@@ -11,11 +11,18 @@ import subprocess  # nosec
 from . import console
 
 
-def run(**kwargs):
+def run(first_pass=False, **kwargs):
     """Runs ffmpeg with the specified command and prints the progress on the
     screen
 
     Keyword arguments:
+        first_pass  - whether or not this will be run as first pass
+
+    Keyword arguments for first pass:
+        command     - the list to pass to subprocess, generated with
+                      generate_args()
+
+    Keyword arguments for other passes:
         command     - the list to pass to subprocess, generated with
                       generate_args()
         color       - the ANSI escape codes for colors
@@ -24,38 +31,57 @@ def run(**kwargs):
         encoding    - the number of the current video in the queue list
         total_size  - the total size of the queue list
         two_pass    - the video's two_pass boolean"""
-    with subprocess.Popen(  # nosec
-        kwargs["command"],
-        universal_newlines=True,
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        bufsize=1,
-    ) as task:
-        output = ""
-        for line in task.stdout:
-            output += line
-            progress, size = get_progress(line)
-            if progress is None:
-                continue
-            if kwargs["size_limit"] and kwargs["two_pass"]:
-                if size > kwargs["size_limit"]:
-                    task.kill()
-            percent = round(get_seconds(progress) * 100 / kwargs["duration"])
-            console.print_progress(
-                f"{kwargs['color']['blue']}{percent}%"
-                f"{kwargs['color']['endc']}",
-                kwargs["encoding"],
-                kwargs["total_size"],
+    if first_pass:
+        try:
+            subprocess.run(  # nosec
+                kwargs["command"],
+                check=True,
+                capture_output=True,
             )
 
-        task.communicate()
-        if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
+        except subprocess.CalledProcessError as error:
             cmd = " ".join(str(arg) for arg in kwargs["command"])
             raise subprocess.CalledProcessError(
-                returncode=task.returncode,
+                returncode=error.returncode,
                 cmd=cmd,
-                stderr=output,
+                stderr=error.stderr.decode(),
             )
+
+    else:
+        with subprocess.Popen(  # nosec
+            kwargs["command"],
+            universal_newlines=True,
+            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE,
+            bufsize=1,
+        ) as task:
+            output = ""
+            for line in task.stdout:
+                output += line
+                progress, size = get_progress(line)
+                if progress is None:
+                    continue
+                if kwargs["size_limit"] and kwargs["two_pass"]:
+                    if size > kwargs["size_limit"]:
+                        task.kill()
+                percent = round(
+                    get_seconds(progress) * 100 / kwargs["duration"]
+                )
+                console.print_progress(
+                    f"{kwargs['color']['blue']}{percent}%"
+                    f"{kwargs['color']['endc']}",
+                    kwargs["encoding"],
+                    kwargs["total_size"],
+                )
+
+            task.communicate()
+            if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
+                cmd = " ".join(str(arg) for arg in kwargs["command"])
+                raise subprocess.CalledProcessError(
+                    returncode=task.returncode,
+                    cmd=cmd,
+                    stderr=output,
+                )
 
 
 def generate_args(webm):

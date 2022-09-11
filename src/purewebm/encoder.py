@@ -3,7 +3,7 @@
 """Module for handling the encodings"""
 
 import pathlib
-import subprocess  # nosec
+from subprocess import CalledProcessError  # nosec
 
 from . import ffmpeg
 from . import console
@@ -94,21 +94,19 @@ def run_first_pass(command, encoding, color, total_size):
     )
 
     try:
-        subprocess.run(  # nosec
-            command,
-            check=True,
-            capture_output=True,
-        )
+        ffmpeg.run(first_pass=True, command=command)
 
-    except subprocess.CalledProcessError as error:
+    except CalledProcessError as error:
         console.print_progress(
-            f"{color['red']}Error running the first pass:",
+            f"{color['red']}Error encountered during the execution of the "
+            "first pass\n"
+            f"Command: {error.cmd}\n"
+            "Output:\n"
+            f"{error.stderr}{color['endc']}",
             encoding,
             total_size,
         )
-        print(f"\n{error.stderr.decode()}{color['endc']}", end="")
         return False
-
     return True
 
 
@@ -266,7 +264,7 @@ def encode_single_pass(**kwargs):
             total_size=total_size,
             two_pass=False,
         )
-    except subprocess.CalledProcessError as error:
+    except CalledProcessError as error:
         console.print_progress(
             f"{color['red']}Error encountered during the execution of the "
             "single pass\n"
