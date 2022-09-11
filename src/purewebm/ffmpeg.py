@@ -13,17 +13,19 @@ from . import console
 
 def run(**kwargs):
     """Runs ffmpeg with the specified command and prints the progress on the
-    screen"""
-    command = kwargs["command"]
-    color = kwargs["color"]
-    limit = kwargs["size_limit"]
-    duration = kwargs["duration"]
-    encoding = kwargs["encoding"]
-    total_size = kwargs["total_size"]
-    two_pass = kwargs["two_pass"]
+    screen
 
+    Keyword arguments:
+        command     - the list to pass to subprocess, generated with
+                      generate_args()
+        color       - the ANSI escape codes for colors
+        size_limit  - the size limit to stay within in kilobytes
+        duration    - the duration of the output file in seconds
+        encoding    - the number of the current video in the queue list
+        total_size  - the total size of the queue list
+        two_pass    - the video's two_pass boolean"""
     with subprocess.Popen(  # nosec
-        command,
+        kwargs["command"],
         universal_newlines=True,
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
@@ -35,19 +37,20 @@ def run(**kwargs):
             progress, size = get_progress(line)
             if progress is None:
                 continue
-            if limit and two_pass:
-                if size > limit:
+            if kwargs["size_limit"] and kwargs["two_pass"]:
+                if size > kwargs["size_limit"]:
                     task.kill()
-            percent = round(get_seconds(progress) * 100 / duration)
+            percent = round(get_seconds(progress) * 100 / kwargs["duration"])
             console.print_progress(
-                f"{color['blue']}{percent}%{color['endc']}",
-                encoding,
-                total_size,
+                f"{kwargs['color']['blue']}{percent}%"
+                f"{kwargs['color']['endc']}",
+                kwargs["encoding"],
+                kwargs["total_size"],
             )
 
         task.communicate()
         if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
-            cmd = " ".join(str(arg) for arg in command)
+            cmd = " ".join(str(arg) for arg in kwargs["command"])
             raise subprocess.CalledProcessError(
                 returncode=task.returncode,
                 cmd=cmd,
