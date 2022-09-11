@@ -25,7 +25,6 @@ def run(first_pass=False, **kwargs):
     Keyword arguments for other passes:
         command     - the list to pass to subprocess, generated with
                       generate_args()
-        color       - the ANSI escape codes for colors
         size_limit  - the size limit to stay within in kilobytes
         duration    - the duration of the output file in seconds
         encoding    - the number of the current video in the queue list
@@ -68,10 +67,10 @@ def run(first_pass=False, **kwargs):
                     get_seconds(progress) * 100 / kwargs["duration"]
                 )
                 console.print_progress(
-                    f"{kwargs['color']['blue']}{percent}%"
-                    f"{kwargs['color']['endc']}",
+                    f"{percent}%",
                     kwargs["encoding"],
                     kwargs["total_size"],
+                    color="blue",
                 )
 
             task.communicate()
