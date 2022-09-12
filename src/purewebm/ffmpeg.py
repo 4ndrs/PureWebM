@@ -153,7 +153,7 @@ def get_duration(file_path):
     """Retrieves the file's start and stop times with ffmpeg"""
     pattern = (
         r"Duration:\s+(?P<stop>\d{2,}:\d{2}:\d{2}\.\d+),\s+"
-        r"start:\s+(?P<start>\d+\.\d+)"
+        r"start:\s+(?P<start>-?\d+\.\d+)"
     )
 
     ffmpeg_output = subprocess.run(  # nosec
