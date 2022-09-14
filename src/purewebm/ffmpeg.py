@@ -61,7 +61,7 @@ def run(first_pass=False, **kwargs):
                 if time is None:
                     continue
                 if kwargs["size_limit"] and kwargs["two_pass"]:
-                    if int(size) > kwargs["size_limit"]:
+                    if size > kwargs["size_limit"]:
                         task.kill()
                 percent = round(get_seconds(time) * 100 / kwargs["duration"])
                 console.print_progress(
@@ -135,7 +135,8 @@ def get_seconds(timestamp):
 
 
 def _get_progress(line):
-    """Parses and returns the time progress and size printed by ffmpeg"""
+    """Parses and returns the time progress and the size in bytes printed by
+    ffmpeg"""
     pattern = (
         r".*size=\s+(?P<size>\d+)kB\s+"
         r"time=(?P<time>\d{2,}:\d{2}:\d{2}\.\d+)"
@@ -144,7 +145,7 @@ def _get_progress(line):
     time, size = (
         (None, None)
         if not found
-        else (found.groupdict()["time"], found.groupdict()["size"])
+        else (found.groupdict()["time"], int(found.groupdict()["size"]) * 1024)
     )
     return time, size
 

@@ -19,7 +19,7 @@ def encode(queue, encoding_done):
             duration = ffmpeg.get_seconds(webm.to) - ffmpeg.get_seconds(
                 webm.ss
             )
-            size_limit = webm.size_limit * 1024
+            size_limit = webm.size_limit * 1024**2  # convert to bytes
             encoding += 1
 
             if webm.two_pass:
@@ -134,7 +134,7 @@ def _run_second_pass(**kwargs):
         )
 
         # Check that the file generated is within the limit
-        size = output_file.stat().st_size / 1024
+        size = output_file.stat().st_size
         if size > size_limit:
             percent = ((size - size_limit) / size_limit) * 100
             percent_txt = (
@@ -160,12 +160,14 @@ def _run_second_pass(**kwargs):
 
         while failed:
             if percent:
-                bitrate -= percent / 100 * bitrate
+                # set minimum percent of 0.020
+                percent = 0.020 if percent < 0.020 else percent
+                bitrate -= round(percent / 100 * bitrate)
             else:
-                bitrate = size_limit / duration * 8 * 1024 / 1000
+                bitrate = round(size_limit / duration * 8)
 
             console.print_progress(
-                f"Retrying with bitrate {round(bitrate)}K\n",
+                f"Retrying with bitrate {round(bitrate / 1000, 2)}K\n",
                 encoding,
                 total_size,
                 color="red",
@@ -173,7 +175,7 @@ def _run_second_pass(**kwargs):
 
             # Find the last b:v index and update
             index = len(command) - command[::-1].index("-b:v")
-            command[index] = str(round(bitrate, 3)) + "K"
+            command[index] = str(bitrate)
 
             ffmpeg.run(
                 command=command,
@@ -185,7 +187,7 @@ def _run_second_pass(**kwargs):
             )
 
             # Check that the file size is within the limit
-            size = output_file.stat().st_size / 1024
+            size = output_file.stat().st_size
             if size > size_limit:
                 percent = ((size - size_limit) / size_limit) * 100
                 percent_txt = (
@@ -193,7 +195,7 @@ def _run_second_pass(**kwargs):
                 )
                 console.print_progress(
                     f"File size is greater than the limit by {percent_txt}% "
-                    f"with bitrate {round(bitrate)}K\n",
+                    f"with bitrate {round(bitrate / 1000, 2)}K\n",
                     encoding,
                     total_size,
                     color="red",
