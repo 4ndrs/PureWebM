@@ -24,3 +24,8 @@ purewebm = 'purewebm.__main__:main'
 [project.urls]
 'Homepage' = 'https://github.com/4ndrs/PureWebM'
 'Bug Tracker' = 'https://github.com/4ndrs/PureWebM/issues'
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
