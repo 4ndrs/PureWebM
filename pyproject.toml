@@ -27,5 +27,11 @@ purewebm = 'purewebm.__main__:main'
 
 [tool.pytest.ini_options]
 addopts = [
-    "--import-mode=importlib",
+    '--import-mode=importlib',
+]
+
+[tool.pylint.main]
+ignore-patterns = [
+    '.*_test\.py',
+    'test_.*\.py',
 ]
