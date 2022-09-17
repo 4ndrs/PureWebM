@@ -3,5 +3,5 @@
 - [ ] Configuration file
 - [ ] Flag to terminate the main process
 - [ ] Flag to request the current progress
-- [ ] Automated tests
+- [X] Automated tests
 - [ ] Automated packaging/deployment
