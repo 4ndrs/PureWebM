@@ -47,3 +47,35 @@ def test_print_progress_invalid(capsys):
     captured = capsys.readouterr()
     assert captured.out == f"{CLEAR_LINE}Encoding 1 of 1: "
     assert captured.err == f"{COLOR.red}Unimplemented color: invalid\n"
+
+
+def test_print_error_defaults(capsys):
+    total_size = Manager().Value(int, 1)
+    console.print_error("second pass", 1, total_size)
+    captured = capsys.readouterr()
+    assert captured.out == f"{CLEAR_LINE}Encoding 1 of 1: "
+    assert (
+        captured.err
+        == f"{COLOR.red}Error encountered during the execution of the "
+        f"second pass\n{COLOR.endc}"
+    )
+
+
+def test_print_error_cmdoutput(capsys):
+    total_size = Manager().Value(int, 1)
+    console.print_error(
+        "second pass",
+        1,
+        total_size,
+        cmd="test_cmd -v",
+        output="Error message",
+    )
+    captured = capsys.readouterr()
+    assert captured.out == f"{CLEAR_LINE}Encoding 1 of 1: "
+    assert (
+        captured.err
+        == f"{COLOR.red}Error encountered during the execution of the "
+        "second pass\n"
+        "Command: test_cmd -v\n"
+        f"Output: Error message{COLOR.endc}"
+    )
