@@ -122,6 +122,26 @@ def generate_args(webm):
     return args + [webm.output, "-y"]
 
 
+def escape_str(string):
+    """Escapes the special characters in string for use in ffmpeg filters"""
+    # Square brackets
+    string = string.replace("[", r"\[").replace("]", r"\]")
+
+    # Single quotes
+    string = string.replace("'", r"\\\'")
+
+    # Semicolon
+    string = string.replace(";", r"\;")
+
+    # Colon
+    string = string.replace(":", r"\\:")
+
+    # Comma
+    string = string.replace(",", r"\,")
+
+    return string
+
+
 def get_seconds(timestamp):
     """Converts timestamp to seconds with 3 decimal places"""
     seconds = sum(
