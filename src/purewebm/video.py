@@ -45,6 +45,16 @@ def prepare(args):
             else params[params.index("-crf") + 1]
         )
 
+    if args["subtitles"]:
+        if video.lavfi is None:
+            video.lavfi = "subtitles=" + ffmpeg.escape_str(
+                str(video.inputs[0])
+            )
+        elif "subtitles" not in video.lavfi:
+            video.lavfi += ",subtitles=" + ffmpeg.escape_str(
+                str(video.inputs[0])
+            )
+
     # To sync the burned subtitles need output seeking
     if video.lavfi and "subtitle" in video.lavfi:
         video.input_seeking = False

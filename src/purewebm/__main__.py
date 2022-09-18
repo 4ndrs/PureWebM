@@ -107,6 +107,15 @@ def parse_argv():
         "(default is unix)",
     )
     parser.add_argument(
+        "--subtitles",
+        "-subs",
+        action="store_true",
+        help="burn the subtitles onto the output file; this flag will "
+        "automatically use the subtitles found in the first input file, "
+        "to use a different file use the -lavfi flag with the subtitles "
+        "filter directly",
+    )
+    parser.add_argument(
         "--encoder",
         "-c:v",
         default="libvpx-vp9",
