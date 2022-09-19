@@ -44,6 +44,8 @@ def main():
     queue = manager.Namespace()
     queue.items = manager.list()
     queue.total_size = manager.Value(int, 0)
+    queue.encoding = manager.Value(int, 0)
+    queue.status = manager.Value(str, "")
 
     queue.items.append(webm)
     queue.total_size.set(queue.total_size.get() + 1)

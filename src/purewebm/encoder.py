@@ -11,7 +11,9 @@ from . import console
 
 def encode(queue, encoding_done):
     """Processes the encodings for the webms in the queue list"""
-    encoding = 0
+    encoding = queue.encoding
+    total_size = queue.total_size
+    status = queue.status
 
     try:
         while queue.items:
@@ -20,7 +22,7 @@ def encode(queue, encoding_done):
                 webm.ss
             )
             size_limit = webm.size_limit * 1024**2  # convert to bytes
-            encoding += 1
+            encoding.set(encoding.get() + 1)
 
             if webm.two_pass:
                 first_pass, second_pass = ffmpeg.generate_args(webm)
@@ -31,8 +33,9 @@ def encode(queue, encoding_done):
                     size_limit=size_limit,
                     duration=duration,
                     crf=webm.crf,
-                    encoding=encoding,
-                    total_size=queue.total_size,
+                    encoding=encoding.get(),
+                    total_size=total_size,
+                    status=status,
                 )
 
             else:
@@ -40,8 +43,9 @@ def encode(queue, encoding_done):
                 _encode_single_pass(
                     command=single_pass,
                     duration=duration,
-                    encoding=encoding,
-                    total_size=queue.total_size,
+                    encoding=encoding.get(),
+                    total_size=total_size,
+                    status=status,
                 )
 
     except KeyboardInterrupt:
@@ -60,12 +64,14 @@ def _encode_two_pass(**kwargs):
     crf = kwargs["crf"]
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
+    status = kwargs["status"]
 
-    if _run_first_pass(first_command, encoding, total_size):
+    if _run_first_pass(first_command, encoding, total_size, status):
         _run_second_pass(
             command=second_command,
             crf=crf,
             output_file=output_file,
+            status=status,
             encoding=encoding,
             size_limit=size_limit,
             total_size=total_size,
@@ -73,10 +79,11 @@ def _encode_two_pass(**kwargs):
         )
 
 
-def _run_first_pass(command, encoding, total_size):
+def _run_first_pass(command, encoding, total_size, status):
     """Returns True if the first pass processes successfully, False
     otherwise"""
-    console.print_progress("processing the first pass", encoding, total_size)
+    status.set("processing the first pass")
+    console.print_progress(status.get(), encoding, total_size)
 
     try:
         ffmpeg.run(first_pass=True, command=command)
@@ -101,6 +108,7 @@ def _run_second_pass(**kwargs):
     command = kwargs["command"]
     crf = kwargs["crf"]
     output_file = kwargs["output_file"]
+    status = kwargs["status"]
     encoding = kwargs["encoding"]
     size_limit = kwargs["size_limit"]
     total_size = kwargs["total_size"]
@@ -117,6 +125,7 @@ def _run_second_pass(**kwargs):
             command=command,
             size_limit=0,
             duration=duration,
+            status=status,
             encoding=encoding,
             total_size=total_size,
             two_pass=True,
@@ -128,6 +137,7 @@ def _run_second_pass(**kwargs):
             command=command,
             size_limit=size_limit,
             duration=duration,
+            status=status,
             encoding=encoding,
             total_size=total_size,
             two_pass=True,
@@ -140,12 +150,12 @@ def _run_second_pass(**kwargs):
             percent_txt = (
                 round(percent) if round(percent) > 1 else round(percent, 3)
             )
-            console.print_progress(
+            status.set(
                 f"File size is greater than the limit by {percent_txt}% with "
-                f"crf {crf}\n",
-                encoding,
-                total_size,
-                color="red",
+                f"crf {crf}",
+            )
+            console.print_progress(
+                status.get() + "\n", encoding, total_size, color="red"
             )
 
             # Set the crf to 10, for a targeted bitrate next
@@ -166,11 +176,11 @@ def _run_second_pass(**kwargs):
             else:
                 bitrate = round(size_limit / duration * 8)
 
+            status.set(
+                f"Retrying with bitrate {round(bitrate / 1000, 2)}K",
+            )
             console.print_progress(
-                f"Retrying with bitrate {round(bitrate / 1000, 2)}K\n",
-                encoding,
-                total_size,
-                color="red",
+                status.get() + "\n", encoding, total_size, color="red"
             )
 
             # Find the last b:v index and update
@@ -181,6 +191,7 @@ def _run_second_pass(**kwargs):
                 command=command,
                 size_limit=size_limit,
                 duration=duration,
+                status=status,
                 encoding=encoding,
                 total_size=total_size,
                 two_pass=True,
@@ -193,19 +204,22 @@ def _run_second_pass(**kwargs):
                 percent_txt = (
                     round(percent) if round(percent) > 1 else round(percent, 3)
                 )
-                console.print_progress(
+                status.set(
                     f"File size is greater than the limit by {percent_txt}% "
-                    f"with bitrate {round(bitrate / 1000, 2)}K\n",
-                    encoding,
-                    total_size,
-                    color="red",
+                    f"with bitrate {round(bitrate / 1000, 2)}K",
+                )
+                console.print_progress(
+                    status.get() + "\n", encoding, total_size, color="red"
                 )
 
             else:
                 failed = False
 
     # Two-pass encoding done
-    console.print_progress("100%\n", encoding, total_size, color="green")
+    status.set("100%")
+    console.print_progress(
+        status.get() + "\n", encoding, total_size, color="green"
+    )
 
     # Delete the first pass log file
     pathlib.Path("PureWebM2pass-0.log").unlink()
@@ -217,10 +231,10 @@ def _encode_single_pass(**kwargs):
     duration = kwargs["duration"]
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
+    status = kwargs["status"]
 
-    console.print_progress(
-        "processing the single pass", encoding, total_size, color="blue"
-    )
+    status.set("processing the single pass")
+    console.print_progress(status.get(), encoding, total_size, color="blue")
 
     # Single pass has no size limit, just constant quality with crf
     command.insert(command.index("-crf") + 2, "-b:v")
@@ -231,6 +245,7 @@ def _encode_single_pass(**kwargs):
             command=command,
             size_limit=0,
             duration=duration,
+            status=status,
             encoding=encoding,
             total_size=total_size,
             two_pass=False,
@@ -244,4 +259,7 @@ def _encode_single_pass(**kwargs):
             output=error.stderr,
         )
     else:
-        console.print_progress("100%\n", encoding, total_size, color="green")
+        status.set("100%")
+        console.print_progress(
+            status.get() + "\n", encoding, total_size, color="green"
+        )
