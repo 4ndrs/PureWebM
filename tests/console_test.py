@@ -49,6 +49,13 @@ def test_print_progress_invalid(capsys):
     assert captured.err == f"{COLOR.red}Unimplemented color: invalid\n"
 
 
+def test_print_progress_zero_total_size(capsys):
+    total_size = Manager().Value(int, 0)
+    console.print_progress("Checking fonts", 0, total_size, color=None)
+    captured = capsys.readouterr()
+    assert captured.out == "Checking fonts\n"
+
+
 def test_print_error_defaults(capsys):
     total_size = Manager().Value(int, 1)
     console.print_error("second pass", 1, total_size)
