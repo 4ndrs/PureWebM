@@ -83,7 +83,7 @@ def _run_first_pass(command, encoding, total_size, status):
     """Returns True if the first pass processes successfully, False
     otherwise"""
     status.set("processing the first pass")
-    console.print_progress(status.get(), encoding, total_size)
+    console.print_progress(status.get(), encoding, total_size.get())
 
     try:
         ffmpeg.run(first_pass=True, command=command)
@@ -92,7 +92,7 @@ def _run_first_pass(command, encoding, total_size, status):
         console.print_error(
             where="first pass",
             encoding=encoding,
-            total_size=total_size,
+            total_size=total_size.get(),
             cmd=error.cmd,
             output=error.stderr,
         )
@@ -155,7 +155,7 @@ def _run_second_pass(**kwargs):
                 f"crf {crf}",
             )
             console.print_progress(
-                status.get() + "\n", encoding, total_size, color="red"
+                status.get() + "\n", encoding, total_size.get(), color="red"
             )
 
             # Set the crf to 10, for a targeted bitrate next
@@ -180,7 +180,7 @@ def _run_second_pass(**kwargs):
                 f"Retrying with bitrate {round(bitrate / 1000, 2)}K",
             )
             console.print_progress(
-                status.get() + "\n", encoding, total_size, color="red"
+                status.get() + "\n", encoding, total_size.get(), color="red"
             )
 
             # Find the last b:v index and update
@@ -209,7 +209,10 @@ def _run_second_pass(**kwargs):
                     f"with bitrate {round(bitrate / 1000, 2)}K",
                 )
                 console.print_progress(
-                    status.get() + "\n", encoding, total_size, color="red"
+                    status.get() + "\n",
+                    encoding,
+                    total_size.get(),
+                    color="red",
                 )
 
             else:
@@ -218,7 +221,7 @@ def _run_second_pass(**kwargs):
     # Two-pass encoding done
     status.set("100%")
     console.print_progress(
-        status.get() + "\n", encoding, total_size, color="green"
+        status.get() + "\n", encoding, total_size.get(), color="green"
     )
 
     # Delete the first pass log file
@@ -234,7 +237,9 @@ def _encode_single_pass(**kwargs):
     status = kwargs["status"]
 
     status.set("processing the single pass")
-    console.print_progress(status.get(), encoding, total_size, color="blue")
+    console.print_progress(
+        status.get(), encoding, total_size.get(), color="blue"
+    )
 
     # Single pass has no size limit, just constant quality with crf
     command.insert(command.index("-crf") + 2, "-b:v")
@@ -254,12 +259,12 @@ def _encode_single_pass(**kwargs):
         console.print_error(
             "single pass",
             encoding,
-            total_size,
+            total_size.get(),
             cmd=error.cmd,
             output=error.stderr,
         )
     else:
         status.set("100%")
         console.print_progress(
-            status.get() + "\n", encoding, total_size, color="green"
+            status.get() + "\n", encoding, total_size.get(), color="green"
         )

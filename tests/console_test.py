@@ -1,7 +1,6 @@
 # Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
 # SPDX-License-Identifier: MIT
 from types import SimpleNamespace
-from multiprocessing import Manager
 
 from purewebm import console
 
@@ -15,14 +14,14 @@ COLOR = SimpleNamespace(
 
 
 def test_print_encoding(capsys):
-    value = Manager().Value(int, 5)
-    console._print_encoding(1, value)
+    total_size = 5
+    console._print_encoding(1, total_size)
     captured = capsys.readouterr()
     assert captured.out == f"{CLEAR_LINE}Encoding 1 of 5: "
 
 
 def test_print_progress_blue(capsys):
-    total_size = Manager().Value(int, 3)
+    total_size = 3
     console.print_progress("Processing", 2, total_size, color="blue")
     captured = capsys.readouterr()
     assert (
@@ -32,7 +31,7 @@ def test_print_progress_blue(capsys):
 
 
 def test_print_progress_green(capsys):
-    total_size = Manager().Value(int, 2)
+    total_size = 2
     console.print_progress("Done", 2, total_size, color="green")
     captured = capsys.readouterr()
     assert (
@@ -42,7 +41,7 @@ def test_print_progress_green(capsys):
 
 
 def test_print_progress_invalid(capsys):
-    total_size = Manager().Value(int, 1)
+    total_size = 1
     console.print_progress("Processing", 1, total_size, color="invalid")
     captured = capsys.readouterr()
     assert captured.out == f"{CLEAR_LINE}Encoding 1 of 1: "
@@ -50,14 +49,14 @@ def test_print_progress_invalid(capsys):
 
 
 def test_print_progress_zero_total_size(capsys):
-    total_size = Manager().Value(int, 0)
+    total_size = 0
     console.print_progress("Checking fonts", 0, total_size, color=None)
     captured = capsys.readouterr()
     assert captured.out == "Checking fonts\n"
 
 
 def test_print_error_defaults(capsys):
-    total_size = Manager().Value(int, 1)
+    total_size = 1
     console.print_error("second pass", 1, total_size)
     captured = capsys.readouterr()
     assert captured.out == f"{CLEAR_LINE}Encoding 1 of 1: "
@@ -69,7 +68,7 @@ def test_print_error_defaults(capsys):
 
 
 def test_print_error_cmdoutput(capsys):
-    total_size = Manager().Value(int, 1)
+    total_size = 1
     console.print_error(
         "second pass",
         1,

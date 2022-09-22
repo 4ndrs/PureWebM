@@ -17,7 +17,7 @@ COLOR = SimpleNamespace(
 def print_progress(message, encoding, total_size, color="blue"):
     """Prints the encoding progress with a customized message"""
 
-    if total_size.get() > 0:
+    if total_size > 0:
         _print_encoding(encoding, total_size)
 
     if color == "red":
@@ -31,7 +31,7 @@ def print_progress(message, encoding, total_size, color="blue"):
     else:
         print(f"{COLOR.red}Unimplemented color: {color}", file=sys.stderr)
 
-    if total_size.get() < 1:
+    if total_size < 1:
         print(end="\n")
 
 
@@ -54,6 +54,6 @@ def print_error(where, encoding, total_size, cmd=None, output=None):
 
 def _print_encoding(encoding, total_size):
     print(
-        f"{CLEAR_LINE}Encoding {encoding} of {total_size.get()}: ",
+        f"{CLEAR_LINE}Encoding {encoding} of {total_size}: ",
         end="",
     )

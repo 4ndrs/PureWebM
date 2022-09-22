@@ -69,7 +69,7 @@ def run(first_pass=False, **kwargs):
                 console.print_progress(
                     kwargs["status"].get(),
                     kwargs["encoding"],
-                    kwargs["total_size"],
+                    kwargs["total_size"].get(),
                     color="blue",
                 )
 
