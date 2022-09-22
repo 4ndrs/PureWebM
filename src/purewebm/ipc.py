@@ -35,8 +35,8 @@ def send(webm, socket):
 
 
 def get_key():
-    """Returns the key for IPC, read from a key file, generates it if it doesn't
-    exists"""
+    """Returns the key for IPC, read from a key file, generates it if it
+    doesn't exists"""
     key_file = CONFIG_PATH / pathlib.Path("PureWebM.key")
 
     if key_file.exists() and key_file.stat().st_size > 0:
