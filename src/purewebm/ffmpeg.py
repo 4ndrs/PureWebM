@@ -27,6 +27,7 @@ def run(first_pass=False, **kwargs):
                       generate_args()
         size_limit  - the size limit to stay within in kilobytes
         duration    - the duration of the output file in seconds
+        status      - the Manager.Value() object to write the current progress
         encoding    - the number of the current video in the queue list
         total_size  - the total size of the queue list
         two_pass    - the video's two_pass boolean"""
@@ -64,10 +65,11 @@ def run(first_pass=False, **kwargs):
                     if size > kwargs["size_limit"]:
                         task.kill()
                 percent = round(get_seconds(time) * 100 / kwargs["duration"])
+                kwargs["status"].set(f"{percent}%")
                 console.print_progress(
-                    f"{percent}%",
+                    kwargs["status"].get(),
                     kwargs["encoding"],
-                    kwargs["total_size"],
+                    kwargs["total_size"].get(),
                     color="blue",
                 )
 
