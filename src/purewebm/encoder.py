@@ -51,6 +51,7 @@ def encode(queue, encoding_done):
     except KeyboardInterrupt:
         pass  # The keyboard interrupt message is handled by main()
     finally:
+        print(end="\n")
         encoding_done.set()
 
 
@@ -221,7 +222,7 @@ def _run_second_pass(**kwargs):
     # Two-pass encoding done
     status.set("100%")
     console.print_progress(
-        status.get() + "\n", encoding, total_size.get(), color="green"
+        status.get(), encoding, total_size.get(), color="green"
     )
 
     # Delete the first pass log file
@@ -266,5 +267,5 @@ def _encode_single_pass(**kwargs):
     else:
         status.set("100%")
         console.print_progress(
-            status.get() + "\n", encoding, total_size.get(), color="green"
+            status.get(), encoding, total_size.get(), color="green"
         )
