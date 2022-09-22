@@ -25,6 +25,8 @@ def print_progress(message, encoding, total_size, color="blue"):
         print(f"{COLOR.green}{message}", end=f"{COLOR.endc}", flush=True)
     elif color == "blue":
         print(f"{COLOR.blue}{message}", end=f"{COLOR.endc}", flush=True)
+    elif color is None:
+        print(message, end="", flush=True)
     else:
         print(f"{COLOR.red}Unimplemented color: {color}", file=sys.stderr)
 
