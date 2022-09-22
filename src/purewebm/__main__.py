@@ -35,6 +35,7 @@ def main():
                     queue.encoding,
                     queue.total_size,
                     color=None,
+                    no_clear=True,
                 )
                 sys.exit(os.EX_OK)
             except ConnectionRefusedError:
