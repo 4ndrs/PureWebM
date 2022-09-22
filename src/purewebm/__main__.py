@@ -16,18 +16,38 @@ from . import ipc
 from . import video
 from . import config
 from . import encoder
+from . import console
 
 
 def main():
     """Main function"""
-    webm = parse_argv()
+    data = parse_argv()
 
     config.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
-    if socket.exists():
+    if isinstance(data, str):
+        if socket.exists() and "status" in data:
+            try:
+                queue = ipc.get_queue(socket)
+                console.print_progress(
+                    queue.status + "\n",
+                    queue.encoding,
+                    queue.total_size,
+                    color=None,
+                )
+                sys.exit(os.EX_OK)
+            except ConnectionRefusedError:
+                print("Error connecting to the socket", file=sys.stderr)
+                socket.unlink()
+                sys.exit(os.EX_PROTOCOL)
+        elif not socket.exists() and "status" in data:
+            print("No current main process running", file=sys.stderr)
+            sys.exit(os.EX_UNAVAILABLE)
+
+    elif socket.exists():
         try:
-            ipc.send(webm, socket)
+            ipc.send(data, socket)
             print("Encoding information sent to the main process")
             sys.exit(os.EX_OK)
         except ConnectionRefusedError:
@@ -47,7 +67,7 @@ def main():
     queue.encoding = manager.Value(int, 0)
     queue.status = manager.Value(str, "")
 
-    queue.items.append(webm)
+    queue.items.append(data)
     queue.total_size.set(queue.total_size.get() + 1)
 
     listener_p = Process(target=ipc.listen, args=(queue, socket))
@@ -77,13 +97,20 @@ def parse_argv():
     parser = argparse.ArgumentParser(
         description="Utility to encode quick webms with ffmpeg"
     )
+    group = parser.add_mutually_exclusive_group(required=True)
+
     parser.add_argument(
         "--version", "-v", action="version", version=f"PureWebM {__version__}"
     )
-    parser.add_argument(
+    group.add_argument(
+        "--status",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="queries the main process and prints the current status",
+    )
+    group.add_argument(
         "--input",
         "-i",
-        required=True,
         action="append",
         help="the input file to encode (NOTE: several files can be selected "
         "adding more -i flags just like with ffmpeg, these will be only for a "
@@ -157,6 +184,9 @@ def parse_argv():
     )
 
     args = vars(parser.parse_args())
+    if "status" in args:
+        return "status"
+
     if "http" in args["input"][0]:
         args["input"] = [pathlib.Path(url) for url in args["input"]]
     else:
@@ -166,9 +196,9 @@ def parse_argv():
     if args["output"]:
         args["output"] = pathlib.Path(args["output"]).absolute()
 
-    webm = video.prepare(args)
+    data = video.prepare(args)
 
-    return webm
+    return data
 
 
 if __name__ == "__main__":

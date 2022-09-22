@@ -4,34 +4,51 @@
 
 import os
 import pathlib
+from types import SimpleNamespace
 from multiprocessing.connection import Listener, Client
 
 from . import CONFIG_PATH
 
 
 def listen(queue, socket):
-    """Listen for connections for interprocess communication using
-    Unix sockets, sends the received kwargs to enqueue"""
+    """Listens for connections using the specified socket, enqueues the data
+    received in the queue, and sends the queue's information if requested"""
     socket = str(socket)
     key = get_key()
     with Listener(socket, "AF_UNIX", authkey=key) as listener:
         try:
             while True:
                 with listener.accept() as conn:
-                    webm = conn.recv()
-                    queue.items.append(webm)
-                    queue.total_size.set(queue.total_size.get() + 1)
+                    data = conn.recv()
+                    if isinstance(data, str) and "get-queue" in data:
+                        tmp_queue = SimpleNamespace()
+                        tmp_queue.status = queue.status.get()
+                        tmp_queue.encoding = queue.encoding.get()
+                        tmp_queue.total_size = queue.total_size.get()
+                        conn.send(tmp_queue)
+                    else:
+                        queue.items.append(data)
+                        queue.total_size.set(queue.total_size.get() + 1)
         except KeyboardInterrupt:
             pass  # The keyboard interrupt message is handled by main()
 
 
-def send(webm, socket):
-    """Attempts to connect to the Unix socket, and sends the kwargs to the
-    main process if successful"""
+def send(data, socket):
+    """Sends the data using the specified socket"""
     socket = str(socket)
     key = get_key()
     with Client(socket, "AF_UNIX", authkey=key) as conn:
-        conn.send(webm)
+        conn.send(data)
+
+
+def get_queue(socket):
+    """Gets the current queue information from the main process"""
+    socket = str(socket)
+    key = get_key()
+    with Client(socket, "AF_UNIX", authkey=key) as conn:
+        conn.send("get-queue")
+        queue = conn.recv()
+    return queue
 
 
 def get_key():
