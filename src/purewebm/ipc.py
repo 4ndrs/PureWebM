@@ -10,7 +10,7 @@ from multiprocessing.connection import Listener, Client
 from . import CONFIG_PATH
 
 
-def listen(queue, socket):
+def listen(queue, socket, kill_event):
     """Listens for connections using the specified socket, enqueues the data
     received in the queue, and sends the queue's information if requested"""
     socket = str(socket)
@@ -20,12 +20,16 @@ def listen(queue, socket):
             while True:
                 with listener.accept() as conn:
                     data = conn.recv()
-                    if isinstance(data, str) and "get-queue" in data:
-                        tmp_queue = SimpleNamespace()
-                        tmp_queue.status = queue.status.get()
-                        tmp_queue.encoding = queue.encoding.get()
-                        tmp_queue.total_size = queue.total_size.get()
-                        conn.send(tmp_queue)
+                    if isinstance(data, str):
+                        if "get-queue" in data:
+                            tmp_queue = SimpleNamespace()
+                            tmp_queue.status = queue.status.get()
+                            tmp_queue.encoding = queue.encoding.get()
+                            tmp_queue.total_size = queue.total_size.get()
+                            conn.send(tmp_queue)
+                        elif "kill" in data:
+                            kill_event.set()
+                            break
                     else:
                         queue.items.append(data)
                         queue.total_size.set(queue.total_size.get() + 1)

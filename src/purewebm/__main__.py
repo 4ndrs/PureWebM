@@ -26,23 +26,73 @@ def main():
     config.verify_config()
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
 
-    if isinstance(data, str):
-        if socket.exists() and "status" in data:
-            try:
-                queue = ipc.get_queue(socket)
-                console.print_progress(
-                    queue.status + "\n",
-                    queue.encoding,
-                    queue.total_size,
-                    color=None,
-                    no_clear=True,
-                )
+    main_process_check(data, socket)
+
+    # Main process does not exist, starting a new queue
+    manager = Manager()
+    encoding_done = Event()
+    kill_now = Event()
+
+    queue = manager.Namespace()
+    queue.items = manager.list()
+    queue.total_size = manager.Value(int, 0)
+    queue.encoding = manager.Value(int, 0)
+    queue.status = manager.Value(str, "")
+
+    queue.items.append(data)
+    queue.total_size.set(queue.total_size.get() + 1)
+
+    listener_p = Process(target=ipc.listen, args=(queue, socket, kill_now))
+    encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
+
+    listener_p.start()
+    encoder_p.start()
+
+    try:
+        while True:
+            if encoding_done.is_set():
+                listener_p.terminate()
+                socket.unlink()
                 sys.exit(os.EX_OK)
+            elif kill_now.is_set():
+                print("\nKill command received", file=sys.stderr)
+                listener_p.kill()
+                encoder_p.kill()
+                sys.exit(-1)
+
+            time.sleep(0.2)
+
+    except KeyboardInterrupt:
+        print("\nStopping (ctrl + c received)", file=sys.stderr)
+        listener_p.terminate()
+        encoder_p.terminate()
+        sys.exit(-1)
+
+
+def main_process_check(data, socket):
+    """Checks if the main process exists and exchanges information"""
+    if isinstance(data, str):
+        if socket.exists():
+            try:
+                if "status" in data:
+                    queue = ipc.get_queue(socket)
+                    console.print_progress(
+                        queue.status + "\n",
+                        queue.encoding,
+                        queue.total_size,
+                        color=None,
+                        no_clear=True,
+                    )
+                    sys.exit(os.EX_OK)
+                elif "kill" in data:
+                    ipc.send("kill", socket)
+                    print("Sent the kill command to the main process")
+                    sys.exit(os.EX_OK)
             except ConnectionRefusedError:
                 print("Error connecting to the socket", file=sys.stderr)
                 socket.unlink()
                 sys.exit(os.EX_PROTOCOL)
-        elif not socket.exists() and "status" in data:
+        elif not socket.exists():
             print("No current main process running", file=sys.stderr)
             sys.exit(os.EX_UNAVAILABLE)
 
@@ -57,40 +107,6 @@ def main():
                 file=sys.stderr,
             )
             socket.unlink()
-
-    # Main process does not exist, starting a new queue
-    manager = Manager()
-    encoding_done = Event()
-
-    queue = manager.Namespace()
-    queue.items = manager.list()
-    queue.total_size = manager.Value(int, 0)
-    queue.encoding = manager.Value(int, 0)
-    queue.status = manager.Value(str, "")
-
-    queue.items.append(data)
-    queue.total_size.set(queue.total_size.get() + 1)
-
-    listener_p = Process(target=ipc.listen, args=(queue, socket))
-    encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
-
-    listener_p.start()
-    encoder_p.start()
-
-    try:
-        while True:
-            if encoding_done.is_set():
-                listener_p.terminate()
-                socket.unlink()
-                sys.exit(os.EX_OK)
-
-            time.sleep(0.2)
-
-    except KeyboardInterrupt:
-        print("\nStopping (ctrl + c received)", file=sys.stderr)
-        listener_p.terminate()
-        encoder_p.terminate()
-        sys.exit(-1)
 
 
 def parse_argv():
@@ -108,6 +124,13 @@ def parse_argv():
         action="store_true",
         default=argparse.SUPPRESS,
         help="queries the main process and prints the current status",
+    )
+    group.add_argument(
+        "--kill",
+        action="store_true",
+        default=argparse.SUPPRESS,
+        help="sends the kill command to the main process; this will terminate "
+        "all encodings immediately, with no cleanups",
     )
     group.add_argument(
         "--input",
@@ -187,6 +210,8 @@ def parse_argv():
     args = vars(parser.parse_args())
     if "status" in args:
         return "status"
+    if "kill" in args:
+        return "kill"
 
     if "http" in args["input"][0]:
         args["input"] = [pathlib.Path(url) for url in args["input"]]
