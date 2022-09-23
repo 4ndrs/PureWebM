@@ -7,6 +7,7 @@ import sys
 import os
 import time
 import pathlib
+import logging
 import argparse
 from multiprocessing import Process, Event, Manager
 
@@ -21,14 +22,24 @@ from . import console
 
 def main():
     """Main function"""
-    data = parse_argv()
-
     config.verify_config()
+
     socket = CONFIG_PATH / pathlib.Path("PureWebM.socket")
+    logfile = CONFIG_PATH / pathlib.Path("PureWebM.log")
+
+    logging.basicConfig(
+        format=f"%(asctime)s {os.uname().nodename} PureWebM[{os.getpid()}]: "
+        "%(levelname)s: %(message)s",
+        level=logging.DEBUG,
+        filename=logfile,
+    )
+    logging.info("Started")
+
+    data = parse_argv()
 
     main_process_check(data, socket)
 
-    # Main process does not exist, starting a new queue
+    logging.warning("Main process does not exist, starting a new queue")
     manager = Manager()
     encoding_done = Event()
     kill_now = Event()
@@ -45,6 +56,7 @@ def main():
     listener_p = Process(target=ipc.listen, args=(queue, socket, kill_now))
     encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
 
+    logging.info("Starting the listener and encoder processes")
     listener_p.start()
     encoder_p.start()
 
@@ -52,18 +64,27 @@ def main():
         while True:
             if encoding_done.is_set():
                 listener_p.terminate()
+                logging.info("Deleting the socket file %s", socket.absolute())
                 socket.unlink()
+                logging.info("Finished")
                 sys.exit(os.EX_OK)
             elif kill_now.is_set():
                 print("\nKill command received", file=sys.stderr)
+                logging.warning(
+                    "Kill command received, killing child processes"
+                )
                 listener_p.kill()
                 encoder_p.kill()
+                logging.info("Finished")
                 sys.exit(-1)
 
             time.sleep(0.2)
 
     except KeyboardInterrupt:
         print("\nStopping (ctrl + c received)", file=sys.stderr)
+        logging.warning(
+            "Received keyboard interrupt, terminating child processes"
+        )
         listener_p.terminate()
         encoder_p.terminate()
         sys.exit(-1)
@@ -75,6 +96,7 @@ def main_process_check(data, socket):
         if socket.exists():
             try:
                 if "status" in data:
+                    logging.info("Requesting the current main process status")
                     queue = ipc.get_queue(socket)
                     console.print_progress(
                         queue.status + "\n",
@@ -83,29 +105,49 @@ def main_process_check(data, socket):
                         color=None,
                         no_clear=True,
                     )
+                    logging.info("Finished")
                     sys.exit(os.EX_OK)
                 elif "kill" in data:
+                    logging.info("Sending the kill command to main process")
                     ipc.send("kill", socket)
                     print("Sent the kill command to the main process")
+                    logging.info("Finished")
                     sys.exit(os.EX_OK)
             except ConnectionRefusedError:
+                logging.error(
+                    "Connection refused error encountered with socket %s",
+                    socket.absolute(),
+                )
                 print("Error connecting to the socket", file=sys.stderr)
+                logging.warning("Deleting the socket file")
                 socket.unlink()
+                logging.info("Finished")
                 sys.exit(os.EX_PROTOCOL)
         elif not socket.exists():
+            logging.error("Socket file %s does not exist", socket.absolute())
             print("No current main process running", file=sys.stderr)
+            logging.info("Finished")
             sys.exit(os.EX_UNAVAILABLE)
 
     elif socket.exists():
         try:
+            logging.info(
+                "Sending the encoding information to the main process"
+            )
             ipc.send(data, socket)
             print("Encoding information sent to the main process")
+            logging.info("Finished")
             sys.exit(os.EX_OK)
         except ConnectionRefusedError:
+            logging.error(
+                "Connection refused error encountered with socket %s",
+                socket.absolute(),
+            )
             print(
                 "Error connecting to the socket\nStarting a new queue",
                 file=sys.stderr,
             )
+            logging.warning("Deleting the socket file")
             socket.unlink()
 
 
@@ -209,8 +251,10 @@ def parse_argv():
 
     args = vars(parser.parse_args())
     if "status" in args:
+        logging.info("Status requested")
         return "status"
     if "kill" in args:
+        logging.info("Kill requested")
         return "kill"
 
     if "http" in args["input"][0]:
