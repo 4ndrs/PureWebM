@@ -249,12 +249,12 @@ def parse_argv():
         "making it possible to override some defaults",
     )
 
+    logging.info("argv: %s", " ".join(sys.argv))
     args = vars(parser.parse_args())
+
     if "status" in args:
-        logging.info("Status requested")
         return "status"
     if "kill" in args:
-        logging.info("Kill requested")
         return "kill"
 
     if "http" in args["input"][0]:
