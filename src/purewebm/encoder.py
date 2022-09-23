@@ -3,6 +3,7 @@
 """Module for handling the encodings"""
 
 import pathlib
+import logging
 from subprocess import CalledProcessError  # nosec
 
 from . import ffmpeg
@@ -23,6 +24,10 @@ def encode(queue, encoding_done):
             )
             size_limit = webm.size_limit * 1024**2  # convert to bytes
             encoding.set(encoding.get() + 1)
+
+            logging.info(
+                "Encoding %i of %i", encoding.get(), queue.total_size.get()
+            )
 
             if webm.two_pass:
                 first_pass, second_pass = ffmpeg.generate_args(webm)
@@ -53,6 +58,7 @@ def encode(queue, encoding_done):
     finally:
         print(end="\n")
         encoding_done.set()
+        logging.info("All encodings done")
 
 
 def _encode_two_pass(**kwargs):
@@ -84,6 +90,7 @@ def _run_first_pass(command, encoding, total_size, status):
     """Returns True if the first pass processes successfully, False
     otherwise"""
     status.set("processing the first pass")
+    logging.info(status.get())
     console.print_progress(status.get(), encoding, total_size.get())
 
     try:
@@ -106,62 +113,70 @@ def _run_second_pass(**kwargs):
     constant quality mode setting b:v 0 and using just the crf. If there is a
     size limit, it will try to encode the file again and again with a
     recalculated bitrate until it is within the size limit."""
-    command = kwargs["command"]
-    crf = kwargs["crf"]
-    output_file = kwargs["output_file"]
-    status = kwargs["status"]
-    encoding = kwargs["encoding"]
-    size_limit = kwargs["size_limit"]
-    total_size = kwargs["total_size"]
-    duration = kwargs["duration"]
+    # command = kwargs["command"]
+    # crf = kwargs["crf"]
+    # output_file = kwargs["output_file"]
+    # status = kwargs["status"]
+    # encoding = kwargs["encoding"]
+    # size_limit = kwargs["size_limit"]
+    # total_size = kwargs["total_size"]
+    # duration = kwargs["duration"]
 
     bitrate = 0
 
     # insert -b:v 0 after the crf to trigger constant quality mode
-    command.insert(command.index("-crf") + 2, "-b:v")
-    command.insert(command.index("-b:v") + 1, "0")
+    kwargs["command"].insert(kwargs["command"].index("-crf") + 2, "-b:v")
+    kwargs["command"].insert(kwargs["command"].index("-b:v") + 1, "0")
 
-    if not size_limit:
+    logging.info("processing the second pass")
+
+    if not kwargs["size_limit"]:
         ffmpeg.run(
-            command=command,
+            command=kwargs["command"],
             size_limit=0,
-            duration=duration,
-            status=status,
-            encoding=encoding,
-            total_size=total_size,
+            duration=kwargs["duration"],
+            status=kwargs["status"],
+            encoding=kwargs["encoding"],
+            total_size=kwargs["total_size"],
             two_pass=True,
         )
 
     else:
         # Try encoding just in constant quality mode first
         ffmpeg.run(
-            command=command,
-            size_limit=size_limit,
-            duration=duration,
-            status=status,
-            encoding=encoding,
-            total_size=total_size,
+            command=kwargs["command"],
+            size_limit=kwargs["size_limit"],
+            duration=kwargs["duration"],
+            status=kwargs["status"],
+            encoding=kwargs["encoding"],
+            total_size=kwargs["total_size"],
             two_pass=True,
         )
 
         # Check that the file generated is within the limit
-        size = output_file.stat().st_size
-        if size > size_limit:
-            percent = ((size - size_limit) / size_limit) * 100
+        size = kwargs["output_file"].stat().st_size
+        if size > kwargs["size_limit"]:
+            percent = (
+                (size - kwargs["size_limit"]) / kwargs["size_limit"]
+            ) * 100
             percent_txt = (
                 round(percent) if round(percent) > 1 else round(percent, 3)
             )
-            status.set(
+            kwargs["status"].set(
                 f"File size is greater than the limit by {percent_txt}% with "
-                f"crf {crf}",
+                f"crf {kwargs['crf']}",
             )
+            logging.error(kwargs["status"].get())
             console.print_progress(
-                status.get() + "\n", encoding, total_size.get(), color="red"
+                kwargs["status"].get() + "\n",
+                kwargs["encoding"],
+                kwargs["total_size"].get(),
+                color="red",
             )
 
             # Set the crf to 10, for a targeted bitrate next
-            if crf != "10":
-                command[command.index("-crf") + 1] = "10"
+            if kwargs["crf"] != "10":
+                kwargs["command"][kwargs["command"].index("-crf") + 1] = "10"
 
             percent = None
             failed = True
@@ -175,44 +190,53 @@ def _run_second_pass(**kwargs):
                 percent = 0.020 if percent < 0.020 else percent
                 bitrate -= round(percent / 100 * bitrate)
             else:
-                bitrate = round(size_limit / duration * 8)
+                bitrate = round(kwargs["size_limit"] / kwargs["duration"] * 8)
 
-            status.set(
+            kwargs["status"].set(
                 f"Retrying with bitrate {round(bitrate / 1000, 2)}K",
             )
+            logging.warning(kwargs["status"].get())
             console.print_progress(
-                status.get() + "\n", encoding, total_size.get(), color="red"
+                kwargs["status"].get() + "\n",
+                kwargs["encoding"],
+                kwargs["total_size"].get(),
+                color="red",
             )
 
             # Find the last b:v index and update
-            index = len(command) - command[::-1].index("-b:v")
-            command[index] = str(bitrate)
+            index = len(kwargs["command"]) - kwargs["command"][::-1].index(
+                "-b:v"
+            )
+            kwargs["command"][index] = str(bitrate)
 
             ffmpeg.run(
-                command=command,
-                size_limit=size_limit,
-                duration=duration,
-                status=status,
-                encoding=encoding,
-                total_size=total_size,
+                command=kwargs["command"],
+                size_limit=kwargs["size_limit"],
+                duration=kwargs["duration"],
+                status=kwargs["status"],
+                encoding=kwargs["encoding"],
+                total_size=kwargs["total_size"],
                 two_pass=True,
             )
 
             # Check that the file size is within the limit
-            size = output_file.stat().st_size
-            if size > size_limit:
-                percent = ((size - size_limit) / size_limit) * 100
+            size = kwargs["output_file"].stat().st_size
+            if size > kwargs["size_limit"]:
+                percent = (
+                    (size - kwargs["size_limit"]) / kwargs["size_limit"]
+                ) * 100
                 percent_txt = (
                     round(percent) if round(percent) > 1 else round(percent, 3)
                 )
-                status.set(
+                kwargs["status"].set(
                     f"File size is greater than the limit by {percent_txt}% "
                     f"with bitrate {round(bitrate / 1000, 2)}K",
                 )
+                logging.error(kwargs["status"].get())
                 console.print_progress(
-                    status.get() + "\n",
-                    encoding,
-                    total_size.get(),
+                    kwargs["status"].get() + "\n",
+                    kwargs["encoding"],
+                    kwargs["total_size"].get(),
                     color="red",
                 )
 
@@ -220,12 +244,17 @@ def _run_second_pass(**kwargs):
                 failed = False
 
     # Two-pass encoding done
-    status.set("100%")
+    kwargs["status"].set("100%")
+    logging.info("Encoding done")
     console.print_progress(
-        status.get(), encoding, total_size.get(), color="green"
+        kwargs["status"].get(),
+        kwargs["encoding"],
+        kwargs["total_size"].get(),
+        color="green",
     )
 
     # Delete the first pass log file
+    logging.info("Deleting the PureWebM2pass-0.log file")
     pathlib.Path("PureWebM2pass-0.log").unlink()
 
 
@@ -238,6 +267,7 @@ def _encode_single_pass(**kwargs):
     status = kwargs["status"]
 
     status.set("processing the single pass")
+    logging.info(status.get())
     console.print_progress(
         status.get(), encoding, total_size.get(), color="blue"
     )
@@ -266,6 +296,7 @@ def _encode_single_pass(**kwargs):
         )
     else:
         status.set("100%")
+        logging.info("Encoding done")
         console.print_progress(
             status.get(), encoding, total_size.get(), color="green"
         )
