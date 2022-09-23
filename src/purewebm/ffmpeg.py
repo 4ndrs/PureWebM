@@ -6,6 +6,7 @@ import os
 import re
 import signal
 import shutil
+import logging
 import subprocess  # nosec
 
 from . import console
@@ -31,6 +32,8 @@ def run(first_pass=False, **kwargs):
         encoding    - the number of the current video in the queue list
         total_size  - the total size of the queue list
         two_pass    - the video's two_pass boolean"""
+    cmd = " ".join(str(arg) for arg in kwargs["command"])
+    logging.info("Executing: %s", cmd)
     if first_pass:
         try:
             subprocess.run(  # nosec
@@ -40,7 +43,11 @@ def run(first_pass=False, **kwargs):
             )
 
         except subprocess.CalledProcessError as error:
-            cmd = " ".join(str(arg) for arg in kwargs["command"])
+            logging.error(
+                "Error encountered running the ffmpeg command, returned "
+                "error code: %i",
+                error.returncode,
+            )
             raise subprocess.CalledProcessError(
                 returncode=error.returncode,
                 cmd=cmd,
@@ -75,7 +82,11 @@ def run(first_pass=False, **kwargs):
 
             task.communicate()
             if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
-                cmd = " ".join(str(arg) for arg in kwargs["command"])
+                logging.error(
+                    "Error encountered running the ffmpeg command, returned "
+                    "error code: %i",
+                    task.returncode,
+                )
                 raise subprocess.CalledProcessError(
                     returncode=task.returncode,
                     cmd=cmd,
