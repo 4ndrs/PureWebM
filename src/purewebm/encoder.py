@@ -242,10 +242,9 @@ def _run_second_pass(**kwargs):
     # Two-pass encoding done
     kwargs["status"].set("100%")
     logging.info(
-        "Encoding %i of %i: %s",
+        "Encoding %i of %i: Done",
         kwargs["encoding"],
         kwargs["total_size"].get(),
-        kwargs["status"].get(),
     )
     console.print_progress(
         kwargs["status"].get(),
