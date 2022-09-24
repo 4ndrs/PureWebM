@@ -31,6 +31,7 @@ def run(first_pass=False, **kwargs):
         status      - the Manager.Value() object to write the current progress
         encoding    - the number of the current video in the queue list
         total_size  - the total size of the queue list
+        ffmpeg_pid  - the Manager.Value() to write the ffmpeg pid
         two_pass    - the video's two_pass boolean"""
     cmd = " ".join(str(arg) for arg in kwargs["command"])
     logging.info("Executing: %s", cmd)
@@ -62,6 +63,7 @@ def run(first_pass=False, **kwargs):
             stdout=subprocess.PIPE,
             bufsize=1,
         ) as task:
+            kwargs["ffmpeg_pid"].set(task.pid)
             output = ""
             for line in task.stdout:
                 output += line
@@ -87,6 +89,7 @@ def run(first_pass=False, **kwargs):
                 )
 
             task.communicate()
+            kwargs["ffmpeg_pid"].set(None)
             if task.returncode not in (os.EX_OK, -abs(signal.SIGKILL)):
                 logging.error(
                     "Error encountered running the ffmpeg command, returned "

@@ -6,6 +6,7 @@
 import sys
 import os
 import time
+import signal
 import pathlib
 import logging
 import argparse
@@ -49,6 +50,7 @@ def main():
     queue.total_size = manager.Value(int, 0)
     queue.encoding = manager.Value(int, 0)
     queue.status = manager.Value(str, "")
+    queue.ffmpeg_pid = manager.Value(int, None)
 
     queue.items.append(data)
     queue.total_size.set(queue.total_size.get() + 1)
@@ -75,7 +77,11 @@ def main():
                 )
                 listener_p.kill()
                 encoder_p.kill()
-                logging.info("Finished")
+                ffmpeg_pid = queue.ffmpeg_pid.get()
+                if ffmpeg_pid:
+                    logging.warning("Killing ffmpeg (PID: %i)", ffmpeg_pid)
+                    os.kill(ffmpeg_pid, signal.SIGKILL)
+                    logging.info("Finished")
                 sys.exit(-1)
 
             time.sleep(0.2)

@@ -37,6 +37,7 @@ def encode(queue, encoding_done):
                     encoding=encoding.get(),
                     total_size=total_size,
                     status=status,
+                    ffmpeg_pid=queue.ffmpeg_pid,
                 )
 
             else:
@@ -47,6 +48,7 @@ def encode(queue, encoding_done):
                     encoding=encoding.get(),
                     total_size=total_size,
                     status=status,
+                    ffmpeg_pid=queue.ffmpeg_pid,
                 )
 
     except KeyboardInterrupt:
@@ -68,6 +70,7 @@ def _encode_two_pass(**kwargs):
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
     status = kwargs["status"]
+    ffmpeg_pid = kwargs["ffmpeg_pid"]
 
     if _run_first_pass(first_command, encoding, total_size, status):
         _run_second_pass(
@@ -78,6 +81,7 @@ def _encode_two_pass(**kwargs):
             encoding=encoding,
             size_limit=size_limit,
             total_size=total_size,
+            ffmpeg_pid=ffmpeg_pid,
             duration=duration,
         )
 
@@ -134,6 +138,7 @@ def _run_second_pass(**kwargs):
             status=kwargs["status"],
             encoding=kwargs["encoding"],
             total_size=kwargs["total_size"],
+            ffmpeg_pid=kwargs["ffmpeg_pid"],
             two_pass=True,
         )
 
@@ -146,6 +151,7 @@ def _run_second_pass(**kwargs):
             status=kwargs["status"],
             encoding=kwargs["encoding"],
             total_size=kwargs["total_size"],
+            ffmpeg_pid=kwargs["ffmpeg_pid"],
             two_pass=True,
         )
 
@@ -212,6 +218,7 @@ def _run_second_pass(**kwargs):
                 status=kwargs["status"],
                 encoding=kwargs["encoding"],
                 total_size=kwargs["total_size"],
+                ffmpeg_pid=kwargs["ffmpeg_pid"],
                 two_pass=True,
             )
 
@@ -265,6 +272,7 @@ def _encode_single_pass(**kwargs):
     encoding = kwargs["encoding"]
     total_size = kwargs["total_size"]
     status = kwargs["status"]
+    ffmpeg_pid = kwargs["ffmpeg_pid"]
 
     status.set("processing the single pass")
     logging.info(status.get())
@@ -284,6 +292,7 @@ def _encode_single_pass(**kwargs):
             status=status,
             encoding=encoding,
             total_size=total_size,
+            ffmpeg_pid=ffmpeg_pid,
             two_pass=False,
         )
     except CalledProcessError as error:
