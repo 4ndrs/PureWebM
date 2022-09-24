@@ -25,10 +25,6 @@ def encode(queue, encoding_done):
             size_limit = webm.size_limit * 1024**2  # convert to bytes
             encoding.set(encoding.get() + 1)
 
-            logging.info(
-                "Encoding %i of %i", encoding.get(), queue.total_size.get()
-            )
-
             if webm.two_pass:
                 first_pass, second_pass = ffmpeg.generate_args(webm)
                 _encode_two_pass(
@@ -245,7 +241,12 @@ def _run_second_pass(**kwargs):
 
     # Two-pass encoding done
     kwargs["status"].set("100%")
-    logging.info("Encoding done")
+    logging.info(
+        "Encoding %i of %i: %s",
+        kwargs["encoding"],
+        kwargs["total_size"].get(),
+        kwargs["status"].get(),
+    )
     console.print_progress(
         kwargs["status"].get(),
         kwargs["encoding"],
