@@ -166,7 +166,7 @@ def _run_second_pass(**kwargs):
                 f"File size is greater than the limit by {percent_txt}% with "
                 f"crf {kwargs['crf']}",
             )
-            logging.error(kwargs["status"].get())
+            logging.warning(kwargs["status"].get())
             console.print_progress(
                 kwargs["status"].get() + "\n",
                 kwargs["encoding"],
@@ -232,7 +232,7 @@ def _run_second_pass(**kwargs):
                     f"File size is greater than the limit by {percent_txt}% "
                     f"with bitrate {round(bitrate / 1000, 2)}K",
                 )
-                logging.error(kwargs["status"].get())
+                logging.warning(kwargs["status"].get())
                 console.print_progress(
                     kwargs["status"].get() + "\n",
                     kwargs["encoding"],
