@@ -305,7 +305,11 @@ def _encode_single_pass(**kwargs):
         )
     else:
         status.set("100%")
-        logging.info("Encoding done")
+        logging.info(
+            "Encoding %i of %i: Done",
+            kwargs["encoding"],
+            kwargs["total_size"].get(),
+        )
         console.print_progress(
             status.get(), encoding, total_size.get(), color="green"
         )
