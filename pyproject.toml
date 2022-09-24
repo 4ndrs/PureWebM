@@ -4,14 +4,14 @@ build-backend = 'hatchling.build'
 
 [project]
 name = 'purewebm'
-version = '0.0.4'
+version = '1.0.0'
 authors = [
     { name='4ndrs', email='andres.degozaru@gmail.com' },
 ]
-description = 'Utility to encode quick webms using Unix sockets to queue the encoding parameters whenever it is executed'
+description = 'Wrapper around ffmpeg to encode quick size restricted webms'
 readme = 'README.md'
 license = { file='LICENSE' }
-requires-python = '>=3.10'
+requires-python = '>=3.8'
 classifiers = [
     'Programming Language :: Python :: 3',
     'License :: OSI Approved :: MIT License',
@@ -24,3 +24,14 @@ purewebm = 'purewebm.__main__:main'
 [project.urls]
 'Homepage' = 'https://github.com/4ndrs/PureWebM'
 'Bug Tracker' = 'https://github.com/4ndrs/PureWebM/issues'
+
+[tool.pytest.ini_options]
+addopts = [
+    '--import-mode=importlib',
+]
+
+[tool.pylint.main]
+ignore-patterns = [
+    '.*_test\.py',
+    'test_.*\.py',
+]
