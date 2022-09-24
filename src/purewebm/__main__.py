@@ -34,17 +34,15 @@ def main():
         level=logging.DEBUG,
         filename=logfile,
     )
+
     logging.info("Started")
 
     data = parse_argv()
-
     main_process_check(data, socket)
 
     logging.warning("Main process does not exist, starting a new queue")
-    manager = Manager()
-    encoding_done = Event()
-    kill_now = Event()
 
+    manager = Manager()
     queue = manager.Namespace()
     queue.items = manager.list()
     queue.total_size = manager.Value(int, 0)
@@ -55,6 +53,12 @@ def main():
     queue.items.append(data)
     queue.total_size.set(queue.total_size.get() + 1)
 
+    _loop(queue, socket)
+
+
+def _loop(queue, socket):
+    encoding_done = Event()
+    kill_now = Event()
     listener_p = Process(target=ipc.listen, args=(queue, socket, kill_now))
     encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
 
