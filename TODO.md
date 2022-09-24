@@ -8,4 +8,4 @@
 - [X] Flag to request the current progress
 - [X] Automated tests
 - [X] Automated packaging/deployment
-- [ ] Update README.md
+- [X] Update README.md
