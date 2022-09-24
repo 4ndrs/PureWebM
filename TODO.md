@@ -1,5 +1,5 @@
 ## v1.0.0
-- [ ] Logging
+- [X] Logging
 - [ ] Configuration file
 - [X] Flag to terminate the main process
 - [X] Flag to request the current progress
