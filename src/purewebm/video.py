@@ -45,6 +45,11 @@ def prepare(args):
             else params[params.index("-crf") + 1]
         )
 
+    if "libvpx" not in video.encoder:
+        video.two_pass = False
+        video.input_seeking = False
+        video.params = ""
+
     if args["subtitles"]:
         if video.lavfi is None:
             video.lavfi = "subtitles=" + ffmpeg.escape_str(
@@ -58,11 +63,6 @@ def prepare(args):
     # To sync the burned subtitles need output seeking
     if video.lavfi and "subtitle" in video.lavfi:
         video.input_seeking = False
-
-    if "libvpx" not in video.encoder:
-        video.two_pass = False
-        video.input_seeking = False
-        video.params = ""
 
     start, stop = ffmpeg.get_duration(video.inputs[0])
     if None in (start, stop):
