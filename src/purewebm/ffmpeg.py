@@ -65,6 +65,7 @@ def run(first_pass=False, **kwargs):
         ) as task:
             kwargs["ffmpeg_pid"].set(task.pid)
             output = ""
+            tmp_status = ""
             for line in task.stdout:
                 output += line
                 time, size = _get_progress(line)
@@ -75,12 +76,14 @@ def run(first_pass=False, **kwargs):
                         task.kill()
                 percent = round(get_seconds(time) * 100 / kwargs["duration"])
                 kwargs["status"].set(f"{percent}%")
-                logging.info(
-                    "Encoding %i of %i: %s",
-                    kwargs["encoding"],
-                    kwargs["total_size"].get(),
-                    kwargs["status"].get(),
-                )
+                if kwargs["status"].get() != tmp_status:
+                    logging.info(
+                        "Encoding %i of %i: %s",
+                        kwargs["encoding"],
+                        kwargs["total_size"].get(),
+                        kwargs["status"].get(),
+                    )
+                    tmp_status = kwargs["status"].get()
                 console.print_progress(
                     kwargs["status"].get(),
                     kwargs["encoding"],
