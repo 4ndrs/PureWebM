@@ -66,14 +66,21 @@ def run(first_pass=False, **kwargs):
             kwargs["ffmpeg_pid"].set(task.pid)
             output = ""
             tmp_status = ""
+            cq_mode = (  # constant quality mode
+                kwargs["command"][kwargs["command"].index("-b:v") + 1] == "0"
+            )
             for line in task.stdout:
                 output += line
                 time, size = _get_progress(line)
                 if time is None:
                     continue
-                if kwargs["size_limit"] and kwargs["two_pass"]:
-                    if size > kwargs["size_limit"]:
-                        task.kill()
+                if (
+                    cq_mode
+                    and kwargs["size_limit"]
+                    and kwargs["two_pass"]
+                    and size > kwargs["size_limit"]
+                ):
+                    task.kill()
                 percent = round(get_seconds(time) * 100 / kwargs["duration"])
                 kwargs["status"].set(f"{percent}%")
                 if kwargs["status"].get() != tmp_status:
