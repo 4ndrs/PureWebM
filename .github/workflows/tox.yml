@@ -1,13 +1,6 @@
 name: Tox
 
-on:
-  push:
-    branches:
-      - develop
-  pull_request:
-    branches:
-      - main
-      - develop
+on: [push]
 
 jobs:
   build:
