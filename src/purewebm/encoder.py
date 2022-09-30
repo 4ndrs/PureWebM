@@ -157,6 +157,7 @@ def _run_second_pass(**kwargs):
 
         # Check that the file generated is within the limit
         size = kwargs["output_file"].stat().st_size
+        logging.info("File size: %i", size)
         if size > kwargs["size_limit"]:
             percent = (
                 (size - kwargs["size_limit"]) / kwargs["size_limit"]
@@ -224,6 +225,7 @@ def _run_second_pass(**kwargs):
 
             # Check that the file size is within the limit
             size = kwargs["output_file"].stat().st_size
+            logging.info("File size: %i", size)
             if size > kwargs["size_limit"]:
                 percent = (
                     (size - kwargs["size_limit"]) / kwargs["size_limit"]
