@@ -73,17 +73,26 @@ def _encode_two_pass(**kwargs):
     ffmpeg_pid = kwargs["ffmpeg_pid"]
 
     if _run_first_pass(first_command, encoding, total_size, status):
-        _run_second_pass(
-            command=second_command,
-            crf=crf,
-            output_file=output_file,
-            status=status,
-            encoding=encoding,
-            size_limit=size_limit,
-            total_size=total_size,
-            ffmpeg_pid=ffmpeg_pid,
-            duration=duration,
-        )
+        try:
+            _run_second_pass(
+                command=second_command,
+                crf=crf,
+                output_file=output_file,
+                status=status,
+                encoding=encoding,
+                size_limit=size_limit,
+                total_size=total_size,
+                ffmpeg_pid=ffmpeg_pid,
+                duration=duration,
+            )
+        except CalledProcessError as error:
+            console.print_error(
+                where="second pass",
+                encoding=encoding,
+                total_size=total_size.get(),
+                cmd=error.cmd,
+                output=error.stderr,
+            )
 
 
 def _run_first_pass(command, encoding, total_size, status):
