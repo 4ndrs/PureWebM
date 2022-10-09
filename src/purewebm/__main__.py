@@ -59,8 +59,12 @@ def main():
 def _loop(queue, socket):
     encoding_done = Event()
     kill_now = Event()
-    listener_p = Process(target=ipc.listen, args=(queue, socket, kill_now))
-    encoder_p = Process(target=encoder.encode, args=(queue, encoding_done))
+    listener_p = Process(
+        name="listener", target=ipc.listen, args=(queue, socket, kill_now)
+    )
+    encoder_p = Process(
+        name="encoder", target=encoder.encode, args=(queue, encoding_done)
+    )
 
     logging.info("Starting the listener and encoder processes")
     listener_p.start()
