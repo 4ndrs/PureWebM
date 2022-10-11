@@ -29,7 +29,8 @@ def prepare(args):
     video.two_pass = True
     video.input_seeking = True
     video.params = (
-        "-map_metadata -1 -map_chapters -1 -map 0:v -f webm -row-mt 1 -speed 0"
+        "-map_metadata -1 -map_chapters -1 -map 0:v -f webm "
+        "-row-mt 1 -cpu-used 0"
     )
 
     if video.extra_params:
