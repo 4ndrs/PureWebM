@@ -19,29 +19,36 @@ Encoding 1 of 1: 100%
 It is possible to request usage instructions through the ```--help``` or ```-h``` option flags:
 ```console
 $ purewebm --help
-usage: purewebm [-h] [--version] (--status | --kill | --input INPUT) [--name_type {unix,md5}] [--subtitles] [--encoder ENCODER] [--start_time START_TIME]
-                [--stop_time STOP_TIME] [--lavfi LAVFI] [--size_limit SIZE_LIMIT] [--crf CRF] [--extra_params EXTRA_PARAMS]
+usage: purewebm [-h] [--version] (--status | --kill | --input INPUT) [--name_type {unix,md5}]
+                [--subtitles] [--encoder ENCODER] [--start_time START_TIME] [--stop_time STOP_TIME]
+                [--lavfi LAVFI] [--size_limit SIZE_LIMIT] [--crf CRF] [--cpu-used {0,1,2,3,4,5}]
+                [--deadline {good,best}] [--extra_params EXTRA_PARAMS]
                 [output]
 
 Utility to encode quick webms with ffmpeg
 
 positional arguments:
-  output                the output file, if not set, the filename will be generated according to --name_type and saved in $HOME/Videos/PureWebM
+  output                the output file, if not set, the filename will be generated according to
+                        --name_type and saved in $HOME/Videos/PureWebM
 
 options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
   --status              queries the main process and prints the current status
-  --kill                sends the kill command to the main process; this will terminate all encodings immediately, with no cleanups
+  --kill                sends the kill command to the main process; this will terminate all
+                        encodings immediately, with no cleanups
   --input INPUT, -i INPUT
-                        the input file to encode (NOTE: several files can be selected adding more -i flags just like with ffmpeg, these will be only for
-                        a single output file; to encode different files run this program multiple times, the files will be queued in the main process
-                        using Unix sockets)
+                        the input file to encode (NOTE: several files can be selected adding more
+                        -i flags just like with ffmpeg, these will be only for a single output
+                        file; to encode different files run this program multiple times, the files
+                        will be queued in the main process using Unix sockets)
   --name_type {unix,md5}, -nt {unix,md5}
-                        the filename type to be generated if the output file is not set: unix uses the current time in microseconds since Epoch, md5 uses
-                        the filename of the input file with a short MD5 hash attached (default is unix)
-  --subtitles, -subs    burn the subtitles onto the output file; this flag will automatically use the subtitles found in the first input file, to use a
-                        different file use the -lavfi flag with the subtitles filter directly
+                        the filename type to be generated if the output file is not set: unix uses
+                        the current time in microseconds since Epoch, md5 uses the filename of the
+                        input file with a short MD5 hash attached (default is unix)
+  --subtitles, -subs    burn the subtitles onto the output file; this flag will automatically use
+                        the subtitles found in the first input file, to use a different file use
+                        the -lavfi flag with the subtitles filter directly
   --encoder ENCODER, -c:v ENCODER
                         the encoder to use (default is libvpx-vp9)
   --start_time START_TIME, -ss START_TIME
@@ -51,10 +58,19 @@ options:
   --lavfi LAVFI, -lavfi LAVFI
                         the set of filters to pass to ffmpeg
   --size_limit SIZE_LIMIT, -sl SIZE_LIMIT
-                        the size limit of the output file in megabytes, use 0 for no limit (default is 3)
+                        the size limit of the output file in megabytes, use 0 for no limit (default
+                        is 3)
   --crf CRF, -crf CRF   the crf to use (default is 24)
+  --cpu-used {0,1,2,3,4,5}, -cpu-used {0,1,2,3,4,5}
+                        the cpu-used for libvpx-vp9; a number between 0 and 5 inclusive, the higher
+                        the number the faster the encoding will be with a quality trade-off
+                        (default is 0)
+  --deadline {good,best}, -deadline {good,best}
+                        the deadline for libvpx-vp9; good is the recommended one, best has the best
+                        compression efficiency but takes the most time (default is good)
   --extra_params EXTRA_PARAMS, -ep EXTRA_PARAMS
-                        the extra parameters to pass to ffmpeg, these will be appended making it possible to override some defaults
+                        the extra parameters to pass to ffmpeg, these will be appended making it
+                        possible to override some defaults
 ```
 
 Logs are saved under ```$HOME/.config/PureWebM/PureWebM.log```
