@@ -257,6 +257,16 @@ def parse_argv():
         "--crf", "-crf", default="24", help="the crf to use (default is 24)"
     )
     parser.add_argument(
+        "--cpu-used",
+        "-cpu-used",
+        type=int,
+        default=0,
+        choices=range(6),
+        help="the cpu-used for libvpx-vp9; a number between 0 and 5 "
+        "inclusive, the higher the number the faster the encoding will be "
+        "with a quality trade-off (default is 0)",
+    )
+    parser.add_argument(
         "--deadline",
         "-deadline",
         default="good",
