@@ -257,6 +257,15 @@ def parse_argv():
         "--crf", "-crf", default="24", help="the crf to use (default is 24)"
     )
     parser.add_argument(
+        "--deadline",
+        "-deadline",
+        default="good",
+        choices=("good", "best"),  # realtime does not work with 2 pass
+        help="the deadline for libvpx-vp9; good is the recommended one, best "
+        "has the best compression efficiency but takes the most time "
+        "(default is good)",
+    )
+    parser.add_argument(
         "--extra_params",
         "-ep",
         help="the extra parameters to pass to ffmpeg, these will be appended "

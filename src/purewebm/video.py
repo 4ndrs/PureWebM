@@ -30,7 +30,7 @@ def prepare(args):
     video.input_seeking = True
     video.params = (
         "-map_metadata -1 -map_chapters -1 -map 0:v -f webm "
-        "-row-mt 1 -cpu-used 0 -deadline good"
+        f"-row-mt 1 -cpu-used 0 -deadline {args['deadline']}"
     )
 
     if video.extra_params:
