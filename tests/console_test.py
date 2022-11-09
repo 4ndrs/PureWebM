@@ -63,6 +63,15 @@ def test_print_progress_zero_total_size(capsys, mocker):
     assert captured.out == "Checking fonts\n"
 
 
+def test_print_progress_notty(capsys, mocker):
+    stdout_mock = mocker.patch("sys.stdout.isatty")
+    stdout_mock.return_value = False
+    total_size = 2
+    console.print_progress("Done", 2, total_size, color="green")
+    captured = capsys.readouterr()
+    assert captured.out == ""
+
+
 def test_print_error_defaults(capsys):
     total_size = 1
     console.print_error("second pass", 1, total_size)
