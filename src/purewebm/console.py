@@ -19,6 +19,9 @@ def print_progress(
 ):
     """Prints the encoding progress with a customized message"""
 
+    if not sys.stdout.isatty():
+        return
+
     if total_size > 0:
         _print_encoding(encoding, total_size, no_clear)
 
