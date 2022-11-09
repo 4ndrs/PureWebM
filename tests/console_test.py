@@ -20,7 +20,9 @@ def test_print_encoding(capsys):
     assert captured.out == f"{CLEAR_LINE}Encoding 1 of 5: "
 
 
-def test_print_progress_blue(capsys):
+def test_print_progress_blue(capsys, mocker):
+    stdout_mock = mocker.patch("sys.stdout.isatty")
+    stdout_mock.return_value = True
     total_size = 3
     console.print_progress("Processing", 2, total_size, color="blue")
     captured = capsys.readouterr()
@@ -30,7 +32,9 @@ def test_print_progress_blue(capsys):
     )
 
 
-def test_print_progress_green(capsys):
+def test_print_progress_green(capsys, mocker):
+    stdout_mock = mocker.patch("sys.stdout.isatty")
+    stdout_mock.return_value = True
     total_size = 2
     console.print_progress("Done", 2, total_size, color="green")
     captured = capsys.readouterr()
@@ -40,7 +44,9 @@ def test_print_progress_green(capsys):
     )
 
 
-def test_print_progress_invalid(capsys):
+def test_print_progress_invalid(capsys, mocker):
+    stdout_mock = mocker.patch("sys.stdout.isatty")
+    stdout_mock.return_value = True
     total_size = 1
     console.print_progress("Processing", 1, total_size, color="invalid")
     captured = capsys.readouterr()
@@ -48,7 +54,9 @@ def test_print_progress_invalid(capsys):
     assert captured.err == f"{COLOR.red}Unimplemented color: invalid\n"
 
 
-def test_print_progress_zero_total_size(capsys):
+def test_print_progress_zero_total_size(capsys, mocker):
+    stdout_mock = mocker.patch("sys.stdout.isatty")
+    stdout_mock.return_value = True
     total_size = 0
     console.print_progress("Checking fonts", 0, total_size, color=None)
     captured = capsys.readouterr()
