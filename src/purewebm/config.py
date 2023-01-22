@@ -1,4 +1,4 @@
-# Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
+# Copyright (c) 2022-2023 4ndrs <andres.degozaru@gmail.com>
 # SPDX-License-Identifier: MIT
 """Module for the handling of the configuration folder"""
 
