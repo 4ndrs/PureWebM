@@ -75,6 +75,17 @@ options:
 
 Logs are saved under ```$HOME/.config/PureWebM/PureWebM.log```
 
+## Configuration file
+
+Some of the default options can be changed using a configuration file named ```PureWebM.conf``` in the configuration folder. Changeable options are ```size_limit```, ```crf```, and ```deadline```. The following is an example of a configuration file:
+
+```bash
+# ~/.config/PureWebM/PureWebM.conf
+size_limit=4
+crf=28
+deadline=good
+```
+
 ## Installation
 
 It can be installed using pip:
