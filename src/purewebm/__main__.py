@@ -167,6 +167,8 @@ def main_process_check(data, socket):
 
 def parse_argv():
     """Parses the command line arguments"""
+    defaults = config.load_config()
+
     parser = argparse.ArgumentParser(
         description="Utility to encode quick webms with ffmpeg"
     )
@@ -248,13 +250,16 @@ def parse_argv():
     parser.add_argument(
         "--size_limit",
         "-sl",
-        default=3,
+        default=defaults["size_limit"],
         type=float,
         help="the size limit of the output file in megabytes, use 0 for no "
-        "limit (default is 3)",
+        f"limit (default is {defaults['size_limit']})",
     )
     parser.add_argument(
-        "--crf", "-crf", default="24", help="the crf to use (default is 24)"
+        "--crf",
+        "-crf",
+        default=str(defaults["crf"]),
+        help=f"the crf to use (default is {defaults['crf']})",
     )
     parser.add_argument(
         "--cpu-used",
@@ -269,11 +274,11 @@ def parse_argv():
     parser.add_argument(
         "--deadline",
         "-deadline",
-        default="good",
+        default=defaults["deadline"],
         choices=("good", "best"),  # realtime does not work with 2 pass
         help="the deadline for libvpx-vp9; good is the recommended one, best "
         "has the best compression efficiency but takes the most time "
-        "(default is good)",
+        f"(default is {defaults['deadline']})",
     )
     parser.add_argument(
         "--extra_params",
