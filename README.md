@@ -98,3 +98,8 @@ $ git clone https://github.com/4ndrs/PureWebM.git
 $ cd PureWebM
 $ pip install .
 ```
+Alternatively, [pipx](https://github.com/pypa/pipx) can be used if <strong>PEP 668</strong> is enforced:
+
+```console
+$ pipx install purewebm
+```
