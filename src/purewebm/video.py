@@ -1,4 +1,4 @@
-# Copyright (c) 2022 4ndrs <andres.degozaru@gmail.com>
+# Copyright (c) 2022-2024 4ndrs <andres.degozaru@gmail.com>
 # SPDX-License-Identifier: MIT
 """Module for the preparation of the video namespace"""
 
@@ -29,7 +29,7 @@ def prepare(args):
     video.two_pass = True
     video.input_seeking = True
     video.params = (
-        "-map_metadata -1 -map_chapters -1 -map 0:v -f webm "
+        "-map_metadata -1 -map_chapters -1 -f webm "
         f"-row-mt 1 -cpu-used {args['cpu_used']} -deadline {args['deadline']}"
     )
 
@@ -50,6 +50,11 @@ def prepare(args):
         video.two_pass = False
         video.input_seeking = False
         video.params = ""
+    elif video.lavfi:
+        video.lavfi += "[webm]"
+        video.params = "-map [webm] " + video.params
+    else:
+        video.params = "-map 0:v " + video.params
 
     if args["subtitles"]:
         if video.lavfi is None:
